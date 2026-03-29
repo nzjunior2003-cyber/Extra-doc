@@ -1,0 +1,24 @@
+{
+  "name": "Extra Docs - CBMPA",
+  "short_name": "Extra Docs",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#7f1d1d",
+  "theme_color": "#7f1d1d",
+  "description": "Gerenciador de Documentos Operacionais CBMPA",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBzdHlsZT0iYmFja2dyb3VuZC1jb2xvcjojN2YxZDFkIj48cGF0aCBmaWxsPSIjZmZjMTA3IiBkPSJNMTc2IDMyYzAtMTcuNyAxNC4zLTMyIDMyLTMyczMyIDE0LjMgMzIgMzJWMTA2LjRjNDEgMTUuMiA3NSA0Ny45IDg5LjYgODkuNkg0MzhjMTcuNyAwIDMyIDE0LjMgMzIgMzJzLTE0LjMgMzItMzIgMzJIzMjkuNmMtMTQuNiA0MS43LTQ4LjYgNzQuNC04OS42IDg5LjZWMzY4YzAgMTcuNy0xNC4zIDMyLTMyIDMycy0zMi0xNC4zLTMyLTMyVjM0OS42Yy00MS0xNS4yLTc1LTQ3LjktODkuNi04OS42SDc0Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyaDEwOGMxNC42LTQxLjcgNDguNi03NC40IDg5LjYtODkuNlYzMnoiLz48L3N2Zz4=",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBzdHlsZT0iYmFja2dyb3VuZC1jb2xvcjojN2YxZDFkIj48cGF0aCBmaWxsPSIjZmZjMTA3IiBkPSJNMTc2IDMyYzAtMTcuNyAxNC4zLTMyIDMyLTMyczMyIDE0LjMgMzIgMzJWMTA2LjRjNDEgMTUuMiA3NSA0Ny45IDg5LjYgODkuNkg0MzhjMTcuNyAwIDMyIDE0LjMgMzIgMzJzLTE0LjMgMzItMzIgMzJIzMjkuNmMtMTQuNiA0MS43LTQ4LjYgNzQuNC04OS42IDg5LjZWMzY4YzAgMTcuNy0xNC4zIDMyLTMyIDMycy0zMi0xNC4zLTMyLTMyVjM0OS42Yy00MS0xNS4yLTc1LTQ3LjktODkuNi04OS42SDc0Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyaDEwOGMxNC42LTQxLjcgNDguNi03NC40IDg5LjYtODkuNlYzMnoiLz48L3N2Zz4=",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
