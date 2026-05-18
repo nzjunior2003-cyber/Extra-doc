@@ -43,7 +43,7 @@ export interface ReportEffectiveItem {
   soldierMf: string; // Matricula
   status: 'P' | 'F' | 'D' | 'P/A' | 'A';
   isCommander?: boolean;
-  serviceType?: 'DIVERSOS' | 'PREVENCAO' | 'GUARDA_VIDAS' | 'CORTE_VEGETAL'; // <-- ADICIONADO AQUI
+  serviceType?: 'DIVERSOS' | 'PREVENCAO' | 'GUARDA_VIDAS' | 'CORTE_VEGETAL';
 }
 
 // Section 3: Service Alterations (Victims)
@@ -111,23 +111,23 @@ export interface AppState {
     reportEffectiveItems: ReportEffectiveItem[];
     reportServiceItems: ReportServiceItem[];
     
-    // Report Logistics & Vehicles Maps (Key = Item Name, Value = {used, qty, origin})
+    // Report Logistics & Vehicles Maps
     reportLogistics: Record<string, { used: boolean, qty: string }>;
     reportVehicles: Record<string, { used: boolean, qty: string, origin: string }>;
-    reportOtherLogistics: string; // "Outros (Especificar)"
-    reportOtherVehicles: string;  // "Outras (Especificar)"
+    reportOtherLogistics: string; 
+    reportOtherVehicles: string;  
 
     // Report Considerations
     reportPositive: { has: boolean, text: string };
     reportNegative: { has: boolean, text: string };
     reportActivities: string;
-    reportGuidance: string; // Serviços de preventivo/orientação
-    reportDistribution: string; // Distribuição do efetivo
+    reportGuidance: string; 
+    reportDistribution: string; 
     reportSuggestions: string;
-    reportFinalConsiderations?: string;
     
-    // Registro Fotográfico
-    reportPhotos: string[]; // <-- ADICIONADO AQUI PARA AS FOTOS
+    // NOVOS CAMPOS ADICIONADOS AQUI
+    reportFinalConsiderations: string;
+    reportPhotos: string[]; 
   };
 }
 
