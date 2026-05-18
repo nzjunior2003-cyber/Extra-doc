@@ -1,11 +1,9 @@
-
-// Add missing React and hook imports
 import React, { useState, useEffect, useRef } from 'react';
-// Add missing Lucide icon imports
 import { 
   Flame, Sun, Moon, FileText, DollarSign, ClipboardList, 
   Share2, Upload, Wifi, WifiOff, Database, CheckCircle2, 
-  User, Search, Plus, X, Star, Trash2, Check, Download 
+  User, Search, Plus, X, Star, Trash2, Check, Download,
+  GripVertical
 } from 'lucide-react';
 import { AppState, DocumentType, Soldier, CostSheetItem, ReportEffectiveItem, ReportServiceItem } from './types';
 import { RANKS, UBMS, UNIT_VALUE_DEFAULT, EXTERNAL_DB_URL, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES } from './constants';
@@ -13,11 +11,9 @@ import { refineText } from './services/geminiService';
 import { generatePDF } from './utils/pdfGenerator';
 import { RAW_SOLDIER_CSV } from './data/initialSoldiers';
 
-// Chave única para o LocalStorage (Simples, sem lista de rascunhos)
 const STORAGE_KEY = 'extra-docs-state';
 
 const DEFAULT_FORM_DATA = {
-  // Issuer
   issuerMatricula: '',
   issuerName: '',
   issuerWarName: '',
@@ -26,28 +22,23 @@ const DEFAULT_FORM_DATA = {
   issuerCpf: '',
   issuerPhone: '',
   
-  // Memo
   recipient: '',
   recipientCargo: '',
   memoSubject: 'Solicitação de Pagamento de Jornada Op. Extraordinária',
   
-  // Memo Aux
   memoNsNum: '',
   memoNsYear: '2025',
   memoBgNum: '',
   memoBgYear: '2025',
   memoDatesList: [],
   
-  // Memo Final
   memoNs: '',
   memoBg: '',
   memoEventDates: '',
   
-  // Cost Sheet
   operationName: '',
   costSheetItems: [],
   
-  // Report Header
   eventName: '',
   eventDate: new Date().toISOString().split('T')[0],
   eventDayOfWeek: 'DOMINGO',
@@ -57,37 +48,29 @@ const DEFAULT_FORM_DATA = {
   eventPublicEstimate: '0',
   siscobNumber: '',
   
-  // Report Section 1 Counts
   reportAbsences: '',
   reportExchanges: '',
   reportDispensations: '',
   reportDelays: '',
 
-  // Report Tables
   reportEffectiveItems: [],
   reportServiceItems: [],
   
-  // Report Logistics & Vehicles
   reportLogistics: {},
   reportVehicles: {},
   reportOtherLogistics: '',
   reportOtherVehicles: '',
 
-  // Report Considerations
   reportPositive: { has: true, text: '' },
   reportNegative: { has: false, text: '' },
   reportActivities: '',
   reportGuidance: 'HOUVE',
   reportDistribution: 'CONFORME NECESSIDADE',
-  reportSuggestions: 'NADA A DECLARAR',
-  reportFinalConsiderations: 'NADA A DECLARAR'
+  reportSuggestions: 'NADA A DECLARAR'
 };
 
 const App: React.FC = () => {
-  // --- STATE ---
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
-  
-  // Referência para o input de arquivo (Importação)
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [state, setState] = useState<AppState>({
@@ -101,7 +84,6 @@ const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState("Conectando...");
   const [isOnline, setIsOnline] = useState(true);
 
-  // Search State
   const [issuerSearchTerm, setIssuerSearchTerm] = useState('');
   const [showIssuerSuggestions, setShowIssuerSuggestions] = useState(false);
   const [issuerSuggestions, setIssuerSuggestions] = useState<Soldier[]>([]);
@@ -114,31 +96,25 @@ const App: React.FC = () => {
   const [showCostSuggestions, setShowCostSuggestions] = useState(false);
   const [costSuggestions, setCostSuggestions] = useState<Soldier[]>([]);
 
-  // Report Effective Search
   const [effSearchTerm, setEffSearchTerm] = useState('');
   const [showEffSuggestions, setShowEffSuggestions] = useState(false);
   const [effSuggestions, setEffSuggestions] = useState<Soldier[]>([]);
   const [newEffItem, setNewEffItem] = useState<{ soldier: Soldier | null, status: string, ubm: string }>({ soldier: null, status: 'F', ubm: UBMS[0] });
 
-  // Report Service Item
   const [newSvcItem, setNewSvcItem] = useState<Partial<ReportServiceItem>>({ sex: 'M', condition: 'ILS', code: '1' });
 
-  // Date Picker State
   const [tempDateInput, setTempDateInput] = useState('');
   const [tempMonthInput, setTempMonthInput] = useState('');
 
-  // Commander Selection Modal State
   const [showWarNameModal, setShowWarNameModal] = useState(false);
   const [tempCommanderId, setTempCommanderId] = useState('');
   const [tempWarName, setTempWarName] = useState('');
   const [commanderSelectionContext, setCommanderSelectionContext] = useState<'COST' | 'REPORT'>('COST');
 
-  // Cost Sheet Date Picker State
   const [costDateInput, setCostDateInput] = useState('');
   const [costMonthInput, setCostMonthInput] = useState('');
   const [newCostDatesList, setNewCostDatesList] = useState<string[]>([]);
 
-  // New Cost Item Temporary State
   const [newCostItem, setNewCostItem] = useState<{
     selectedSoldier: Soldier | null;
     serviceType: string;
@@ -151,7 +127,8 @@ const App: React.FC = () => {
     ubm: UBMS[0]
   });
 
-  // --- LOGICA DE ESTADO ÚNICO & AUTO-SAVE ---
+  // Estado para o Drag and Drop
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // 1. Carregar Dados ao Iniciar
   useEffect(() => {
@@ -159,16 +136,13 @@ const App: React.FC = () => {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        // Garante que não sobrescrevemos o personnelDb se ele estiver vazio no save
         setState(prev => ({ 
           ...prev, 
           ...parsed, 
           personnelDb: prev.personnelDb 
         }));
         
-        // Restaura termos de busca para melhor UX
         if (parsed.formData?.issuerName) setIssuerSearchTerm(parsed.formData.issuerName);
-
       } catch (e) {
         console.error("Erro ao carregar dados salvos", e);
       }
@@ -178,20 +152,101 @@ const App: React.FC = () => {
   // 2. Auto-Save
   useEffect(() => {
     const saveData = setTimeout(() => {
-      // Não salvamos o banco de dados no localStorage para economizar espaço
       const stateToSave = { ...state, personnelDb: [] };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       setLastSavedTime(new Date());
-    }, 1000); // Debounce de 1 segundo
+    }, 1000); 
 
     return () => clearTimeout(saveData);
   }, [state]);
 
-  // --- IMPORTAR / EXPORTAR ---
+  // --- SINCRONIZAÇÃO AUTOMÁTICA: RELATÓRIO -> PLANILHA ---
+  useEffect(() => {
+    const reportItems = state.formData.reportEffectiveItems;
+    const costItems = state.formData.costSheetItems;
+    
+    let needsUpdate = false;
+    let newCostItems = [...costItems];
+
+    // 1. Remover da planilha quem marcou FALTA (F) ou DISPENSA (D) no relatório
+    const invalidMatriculas = reportItems
+        .filter(r => r.status === 'F' || r.status === 'D')
+        .map(r => r.soldierMf);
+    
+    const hasInvalidToDrop = newCostItems.some(c => invalidMatriculas.includes(c.soldierMatricula));
+    if (hasInvalidToDrop) {
+        newCostItems = newCostItems.filter(c => !invalidMatriculas.includes(c.soldierMatricula));
+        needsUpdate = true;
+    }
+
+    // 2. Adicionar na planilha quem está válido (P, P/A, A) e ainda não está na lista
+    const validReportItems = reportItems.filter(r => r.status !== 'F' && r.status !== 'D');
+    
+    validReportItems.forEach(reportItem => {
+        const exists = newCostItems.some(c => c.soldierMatricula === reportItem.soldierMf);
+        
+        if (!exists) {
+            newCostItems.push({
+                id: `sync-${reportItem.id}`, 
+                soldierName: reportItem.soldierName,
+                soldierMatricula: reportItem.soldierMf,
+                soldierRank: reportItem.soldierRank,
+                soldierUbm: reportItem.soldierUbm,
+                date: state.formData.eventDate || '', 
+                datesList: state.formData.eventDate ? [state.formData.eventDate] : [],
+                serviceType: 'PREVENCAO',
+                quantity: 1, 
+                unitValue: UNIT_VALUE_DEFAULT,
+                isCommander: reportItem.isCommander
+            });
+            needsUpdate = true;
+        } else {
+            const idx = newCostItems.findIndex(c => c.soldierMatricula === reportItem.soldierMf);
+            if (newCostItems[idx].isCommander !== reportItem.isCommander) {
+                newCostItems[idx].isCommander = reportItem.isCommander;
+                needsUpdate = true;
+            }
+        }
+    });
+
+    if (needsUpdate) {
+        setState(prev => ({
+            ...prev,
+            formData: { ...prev.formData, costSheetItems: newCostItems }
+        }));
+    }
+  }, [state.formData.reportEffectiveItems, state.formData.eventDate]);
+
+  // --- FUNÇÕES DE DRAG AND DROP ---
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); 
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    setState(prev => {
+      const newItems = [...prev.formData.costSheetItems];
+      const draggedItem = newItems[draggedIndex];
+      
+      newItems.splice(draggedIndex, 1);
+      newItems.splice(dropIndex, 0, draggedItem);
+      
+      return {
+        ...prev,
+        formData: { ...prev.formData, costSheetItems: newItems }
+      };
+    });
+    setDraggedIndex(null);
+  };
 
   const handleExport = () => {
     const stateToExport = { ...state, personnelDb: [] };
-    // Nome do arquivo baseado no tipo de documento ou data
     const docName = state.currentDoc === DocumentType.MEMO ? 'memorando' : 
                     state.currentDoc === DocumentType.COST_SHEET ? 'planilha_custos' : 'relatorio';
     const fileName = `extradocs_${docName}_${new Date().toISOString().split('T')[0]}.json`;
@@ -219,7 +274,6 @@ const App: React.FC = () => {
         if (!parsedState.formData) throw new Error("Arquivo inválido");
 
         if (confirm("Importar este arquivo substituirá os dados atuais. Deseja continuar?")) {
-            // Merge do estado importado com o DB atual
             setState(prev => ({
               ...prev,
               ...parsedState,
@@ -235,11 +289,8 @@ const App: React.FC = () => {
       }
     };
     reader.readAsText(file);
-    // Reset input para permitir selecionar o mesmo arquivo novamente se necessário
     event.target.value = '';
   };
-
-  // --- LÓGICA DE GERAÇÃO DE MÊS INTEIRO ---
 
   const formatAnyDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -272,8 +323,6 @@ const App: React.FC = () => {
     setNewCostDatesList(prev => [...new Set([...prev, costMonthInput])]);
     setCostMonthInput('');
   };
-
-  // --- LÓGICA EXISTENTE ---
 
   const normalizeRank = (csvRank: string): string => {
     const r = csvRank.toUpperCase();
@@ -519,7 +568,6 @@ const App: React.FC = () => {
   const selectCostSoldier = (s: Soldier) => {
     setCostSearchTerm(`${s.matricula} - ${s.nome}`);
     setShowCostSuggestions(false);
-    // Atualiza também a UBM do novo item com a UBM do militar selecionado
     setNewCostItem(prev => ({ ...prev, selectedSoldier: s, ubm: s.ubm || UBMS[0] }));
   };
 
@@ -560,18 +608,6 @@ const App: React.FC = () => {
     }));
   };
 
-  const updateCostItem = (id: string, field: 'serviceType' | 'quantity', value: any) => {
-    setState(prev => ({
-      ...prev,
-      formData: {
-        ...prev.formData,
-        costSheetItems: prev.formData.costSheetItems.map(item => 
-          item.id === id ? { ...item, [field]: value } : item
-        )
-      }
-    }));
-  };
-
   const removeCostDate = (dateToRemove: string) => {
     setNewCostDatesList(prev => prev.filter(d => d !== dateToRemove));
   };
@@ -580,7 +616,6 @@ const App: React.FC = () => {
     const { selectedSoldier, serviceType, qty, ubm } = newCostItem;
     const soldierName = selectedSoldier?.nome || "Militar Manual";
     const soldierRank = selectedSoldier?.posto ? selectedSoldier.posto.toUpperCase() : "SD QBM";
-    // Usa a UBM selecionada manualmente ou a do militar
     const soldierUbm = ubm || selectedSoldier?.ubm || "UBM";
     const soldierMatricula = selectedSoldier?.matricula || costSearchTerm;
 
@@ -640,7 +675,6 @@ const App: React.FC = () => {
           newFormData.issuerWarName = tempWarName;
         }
       } else {
-        // REPORT CONTEXT
         const updatedItems = prev.formData.reportEffectiveItems.map(item => ({
           ...item,
           isCommander: item.id === tempCommanderId
@@ -650,7 +684,7 @@ const App: React.FC = () => {
         
         if (commander) {
            newFormData.issuerName = commander.soldierName;
-           newFormData.issuerMatricula = commander.soldierMf; // In report item it's called soldierMf
+           newFormData.issuerMatricula = commander.soldierMf; 
            newFormData.issuerRank = commander.soldierRank;
            newFormData.issuerUbm = commander.soldierUbm;
            newFormData.issuerWarName = tempWarName;
@@ -661,8 +695,6 @@ const App: React.FC = () => {
     });
     setShowWarNameModal(false);
   };
-
-  // --- Report Specific Handlers ---
 
   const handleEffSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -687,7 +719,7 @@ const App: React.FC = () => {
       id: Date.now().toString(),
       soldierName: newEffItem.soldier.nome,
       soldierRank: newEffItem.soldier.posto || '',
-      soldierUbm: newEffItem.ubm, // Use updated ubm
+      soldierUbm: newEffItem.ubm,
       soldierMf: newEffItem.soldier.matricula,
       status: newEffItem.status as any,
       isCommander: false
@@ -820,31 +852,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleClearForm = () => {
-    if (confirm("Tem certeza que deseja limpar todo o formulário? Todos os dados não salvos serão perdidos.")) {
-      setState(prev => ({
-        ...prev,
-        formData: JSON.parse(JSON.stringify(DEFAULT_FORM_DATA))
-      }));
-      
-      // Reset search terms and temporary states
-      setIssuerSearchTerm('');
-      setRecipientSearchTerm('');
-      setCostSearchTerm('');
-      setEffSearchTerm('');
-      setNewCostDatesList([]);
-      setNewCostItem(prev => ({ ...prev, qty: 1, selectedSoldier: null }));
-      setNewEffItem({ soldier: null, status: 'F', ubm: UBMS[0] });
-      setNewSvcItem({ sex: 'M', condition: 'ILS', code: '1', name: '', age: '' });
-      setTempDateInput('');
-      setTempMonthInput('');
-      setCostDateInput('');
-      setCostMonthInput('');
-      
-      alert("Formulário limpo com sucesso!");
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
       
@@ -909,14 +916,6 @@ const App: React.FC = () => {
                 className="hidden" 
                 onChange={handleImport}
              />
-
-             <button 
-               onClick={handleClearForm}
-               className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-900/50 text-red-200 transition-all text-sm mt-4 border border-red-900/30 group"
-             >
-                <Trash2 size={18} className="group-hover:text-red-100" />
-                <span className="group-hover:text-red-100">Limpar Tudo</span>
-             </button>
           </div>
 
         </nav>
@@ -1022,12 +1021,12 @@ const App: React.FC = () => {
                          </div>
                          {showIssuerSuggestions && (
                            <ul className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto mt-1">
-                             {issuerSuggestions.map(s => (
-                               <li key={s.matricula} onClick={() => selectIssuer(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm border-b border-gray-100 dark:border-gray-600 last:border-0">
-                                 <div className="font-bold">{s.posto} {s.nome}</div>
-                                 <div className="text-xs text-gray-500 dark:text-gray-400">Mat: {s.matricula}</div>
-                               </li>
-                             ))}
+                              {issuerSuggestions.map(s => (
+                                <li key={s.matricula} onClick={() => selectIssuer(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm border-b border-gray-100 dark:border-gray-600 last:border-0">
+                                   <div className="font-bold">{s.posto} {s.nome}</div>
+                                   <div className="text-xs text-gray-500 dark:text-gray-400">Mat: {s.matricula}</div>
+                                </li>
+                              ))}
                            </ul>
                          )}
                       </div>
@@ -1263,8 +1262,18 @@ const App: React.FC = () => {
                               </tr>
                            </thead>
                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                              {state.formData.costSheetItems.map(item => (
-                                 <tr key={item.id} className={item.isCommander ? "bg-yellow-50 dark:bg-yellow-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}>
+                              {state.formData.costSheetItems.map((item, index) => (
+                                 <tr 
+                                    key={item.id} 
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, index)}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => handleDrop(e, index)}
+                                    className={`
+                                      ${item.isCommander ? "bg-yellow-50 dark:bg-yellow-900/10" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"} 
+                                      ${draggedIndex === index ? 'opacity-40 bg-gray-200 cursor-grabbing' : 'cursor-grab'}
+                                    `}
+                                 >
                                     <td className="p-3 text-center">
                                        <button 
                                           onClick={() => initiateCommanderSelection(item.id, 'COST')} 
@@ -1291,8 +1300,11 @@ const App: React.FC = () => {
                                     <td className="p-3 text-right font-bold text-green-600">
                                        {(item.quantity * item.unitValue).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
                                     </td>
-                                    <td className="p-3 flex justify-center gap-2">
-                                       <button onClick={() => removeCostItem(item.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
+                                    <td className="p-3 flex justify-center items-center gap-2">
+                                       <div title="Segure para arrastar" className="text-gray-400 hover:text-gray-600 active:text-blue-600 flex items-center justify-center">
+                                          <GripVertical size={20} />
+                                       </div>
+                                       <button onClick={() => removeCostItem(item.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded" title="Remover">
                                           <Trash2 size={16} />
                                        </button>
                                     </td>
@@ -1669,7 +1681,7 @@ const App: React.FC = () => {
                                 <div className="flex gap-1">
                                    <button 
                                       onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportNegative: {...prev.formData.reportNegative, has: true}}}))}
-                                      className={`px-3 py-1 text-xs font-bold rounded ${state.formData.reportNegative.has ? 'bg-gray-600 text-white' : 'bg-gray-200'}`} // Negative logic usually red, but screenshot implies simple toggle
+                                      className={`px-3 py-1 text-xs font-bold rounded ${state.formData.reportNegative.has ? 'bg-gray-600 text-white' : 'bg-gray-200'}`}
                                    >SIM</button>
                                    <button 
                                       onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportNegative: {...prev.formData.reportNegative, has: false}}}))}
@@ -1707,19 +1719,6 @@ const App: React.FC = () => {
                           <label className="label">SUGESTÕES</label>
                           <input type="text" className="input" value={state.formData.reportSuggestions} onChange={(e) => handleInputChange('reportSuggestions', e.target.value)} />
                        </div>
-                    </div>
-                 </div>
-
-                 {/* 7. FINAL CONSIDERATIONS */}
-                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <h3 className="section-title text-cbmpa-800">7. Considerações Finais</h3>
-                    <div>
-                       <textarea 
-                          className="input h-24" 
-                          placeholder="Considerações finais do relatório..."
-                          value={state.formData.reportFinalConsiderations} 
-                          onChange={(e) => handleInputChange('reportFinalConsiderations', e.target.value)} 
-                       />
                     </div>
                  </div>
               </div>
