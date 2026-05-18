@@ -135,6 +135,7 @@ const App: React.FC = () => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [draggedReportIndex, setDraggedReportIndex] = useState<number | null>(null);
 
+  // 1. Carregar Dados ao Iniciar (Blindado contra crashes)
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
@@ -143,6 +144,8 @@ const App: React.FC = () => {
         setState(prev => ({ 
           ...prev, 
           ...parsed, 
+          // A linha abaixo funde os dados originais com os salvos, garantindo que o reportPhotos nunca fique vazio!
+          formData: { ...prev.formData, ...(parsed.formData || {}) },
           personnelDb: prev.personnelDb 
         }));
         if (parsed.formData?.issuerName) setIssuerSearchTerm(parsed.formData.issuerName);
@@ -173,8 +176,8 @@ const App: React.FC = () => {
 
   // --- SINCRONIZAÇÃO AUTOMÁTICA: RELATÓRIO -> PLANILHA ---
   useEffect(() => {
-    const reportItems = state.formData.reportEffectiveItems;
-    const costItems = state.formData.costSheetItems;
+    const reportItems = state.formData.reportEffectiveItems || [];
+    const costItems = state.formData.costSheetItems || [];
     
     let needsUpdate = false;
     let newCostItems = [...costItems];
@@ -277,7 +280,7 @@ const App: React.FC = () => {
     reader.onload = (event) => {
       const base64 = event.target?.result as string;
       setState(prev => {
-        const newPhotos = [...prev.formData.reportPhotos];
+        const newPhotos = [...(prev.formData.reportPhotos || [])];
         newPhotos[index] = base64;
         return { ...prev, formData: { ...prev.formData, reportPhotos: newPhotos } };
       });
@@ -294,7 +297,7 @@ const App: React.FC = () => {
 
   const removePhotoField = (index: number) => {
     setState(prev => {
-      const newPhotos = prev.formData.reportPhotos.filter((_, i) => i !== index);
+      const newPhotos = (prev.formData.reportPhotos || []).filter((_, i) => i !== index);
       return { ...prev, formData: { ...prev.formData, reportPhotos: newPhotos } };
     });
   };
@@ -362,7 +365,7 @@ const App: React.FC = () => {
       ...prev,
       formData: {
         ...prev.formData,
-        memoDatesList: [...new Set([...prev.formData.memoDatesList, tempMonthInput])]
+        memoDatesList: [...new Set([...(prev.formData.memoDatesList || []), tempMonthInput])]
       }
     }));
     setTempMonthInput('');
@@ -478,7 +481,7 @@ const App: React.FC = () => {
   }, [state.formData.memoNsNum, state.formData.memoNsYear, state.formData.memoBgNum, state.formData.memoBgYear]);
 
   useEffect(() => {
-    const dates = state.formData.memoDatesList;
+    const dates = state.formData.memoDatesList || [];
     if (dates.length === 0) {
       setState(prev => ({ ...prev, formData: { ...prev.formData, memoEventDates: '' } }));
       return;
@@ -617,13 +620,13 @@ const App: React.FC = () => {
 
   const addMemoDate = () => {
     if (!tempDateInput) return;
-    if (state.formData.memoDatesList.includes(tempDateInput)) {
+    if ((state.formData.memoDatesList || []).includes(tempDateInput)) {
       setTempDateInput('');
       return;
     }
     setState(prev => ({
       ...prev,
-      formData: { ...prev.formData, memoDatesList: [...prev.formData.memoDatesList, tempDateInput] }
+      formData: { ...prev.formData, memoDatesList: [...(prev.formData.memoDatesList || []), tempDateInput] }
     }));
     setTempDateInput('');
   };
@@ -631,7 +634,7 @@ const App: React.FC = () => {
   const removeMemoDate = (dateToRemove: string) => {
     setState(prev => ({
       ...prev,
-      formData: { ...prev.formData, memoDatesList: prev.formData.memoDatesList.filter(d => d !== dateToRemove) }
+      formData: { ...prev.formData, memoDatesList: (prev.formData.memoDatesList || []).filter(d => d !== dateToRemove) }
     }));
   };
 
@@ -1135,7 +1138,7 @@ const App: React.FC = () => {
                       </div>
                    </div>
                    <div className="flex flex-wrap gap-2 mt-4">
-                      {state.formData.memoDatesList.map(date => (
+                      {(state.formData.memoDatesList || []).map(date => (
                          <span key={date} className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded text-sm font-medium flex items-center gap-2">
                             {formatAnyDate(date)}
                             <button onClick={() => removeMemoDate(date)} className="text-red-500 hover:text-red-700"><X size={14}/></button>
@@ -1209,7 +1212,6 @@ const App: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* REMOVIDO "ADICIONAR MÊS INTEIRO" DAQUI */}
                       <div className="grid grid-cols-1 gap-4">
                           <div>
                             <label className="label">2. ADICIONAR DATA INDIVIDUAL</label>
@@ -1257,7 +1259,7 @@ const App: React.FC = () => {
                    </div>
                 </div>
 
-                {state.formData.costSheetItems.length > 0 && (
+                {(state.formData.costSheetItems || []).length > 0 && (
                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
@@ -1274,7 +1276,7 @@ const App: React.FC = () => {
                               </tr>
                            </thead>
                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                              {state.formData.costSheetItems.map((item, index) => (
+                              {(state.formData.costSheetItems || []).map((item, index) => (
                                  <tr 
                                     key={item.id} 
                                     draggable
@@ -1326,9 +1328,9 @@ const App: React.FC = () => {
                            <tfoot className="bg-gray-50 dark:bg-gray-900 font-bold border-t border-gray-200 dark:border-gray-700">
                               <tr>
                                  <td colSpan={5} className="p-3 text-right">TOTAL GERAL:</td>
-                                 <td className="p-3 text-center">{state.formData.costSheetItems.reduce((acc, i) => acc + i.quantity, 0)}</td>
+                                 <td className="p-3 text-center">{(state.formData.costSheetItems || []).reduce((acc, i) => acc + i.quantity, 0)}</td>
                                  <td className="p-3 text-right text-green-700">
-                                    {state.formData.costSheetItems.reduce((acc, i) => acc + (i.quantity * i.unitValue), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                    {(state.formData.costSheetItems || []).reduce((acc, i) => acc + (i.quantity * i.unitValue), 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
                                  </td>
                                  <td></td>
                               </tr>
@@ -1413,25 +1415,25 @@ const App: React.FC = () => {
                        <div className="bg-gray-100 p-2 rounded text-center">
                           <label className="label">FALTAS</label>
                           <div className="font-bold text-gray-600">
-                             {state.formData.reportEffectiveItems.filter(i => i.status === 'F').length}
+                             {(state.formData.reportEffectiveItems || []).filter(i => i.status === 'F').length}
                           </div>
                        </div>
                        <div className="bg-gray-100 p-2 rounded text-center">
                           <label className="label">PERMUTAS</label>
                           <div className="font-bold text-gray-600">
-                             {state.formData.reportEffectiveItems.filter(i => i.status === 'P/A').length}
+                             {(state.formData.reportEffectiveItems || []).filter(i => i.status === 'P/A').length}
                           </div>
                        </div>
                        <div className="bg-gray-100 p-2 rounded text-center">
                           <label className="label">DISPENSAS</label>
                           <div className="font-bold text-gray-600">
-                             {state.formData.reportEffectiveItems.filter(i => i.status === 'D').length}
+                             {(state.formData.reportEffectiveItems || []).filter(i => i.status === 'D').length}
                           </div>
                        </div>
                        <div className="bg-gray-100 p-2 rounded text-center">
                           <label className="label">ATRASOS</label>
                           <div className="font-bold text-gray-600">
-                             {state.formData.reportEffectiveItems.filter(i => i.status === 'A').length}
+                             {(state.formData.reportEffectiveItems || []).filter(i => i.status === 'A').length}
                           </div>
                        </div>
                     </div>
@@ -1481,7 +1483,7 @@ const App: React.FC = () => {
                           </button>
                        </div>
                     </div>
-                    {state.formData.reportEffectiveItems.length > 0 && (
+                    {(state.formData.reportEffectiveItems || []).length > 0 && (
                       <div className="overflow-x-auto">
                          <table className="w-full text-sm">
                             <thead className="bg-gray-100 dark:bg-gray-900 text-xs font-bold uppercase text-gray-600">
@@ -1496,7 +1498,7 @@ const App: React.FC = () => {
                                </tr>
                             </thead>
                             <tbody>
-                               {state.formData.reportEffectiveItems.map((item, index) => (
+                               {(state.formData.reportEffectiveItems || []).map((item, index) => (
                                   <tr 
                                       key={item.id} 
                                       draggable
@@ -1536,7 +1538,7 @@ const App: React.FC = () => {
                                ))}
                             </tbody>
                          </table>
-                      </div>
+                       </div>
                     )}
                  </div>
 
@@ -1579,7 +1581,7 @@ const App: React.FC = () => {
                           </button>
                        </div>
                     </div>
-                    {state.formData.reportServiceItems.length > 0 && (
+                    {(state.formData.reportServiceItems || []).length > 0 && (
                        <table className="w-full text-sm">
                           <thead className="bg-gray-100 dark:bg-gray-900 text-xs font-bold uppercase text-gray-600">
                              <tr>
@@ -1591,7 +1593,7 @@ const App: React.FC = () => {
                              </tr>
                           </thead>
                           <tbody>
-                             {state.formData.reportServiceItems.map(item => (
+                             {(state.formData.reportServiceItems || []).map(item => (
                                 <tr key={item.id} className="border-b border-gray-100 dark:border-gray-700">
                                    <td className="p-2">{item.name}</td>
                                    <td className="p-2 text-center">{item.age} / {item.sex}</td>
@@ -1695,11 +1697,11 @@ const App: React.FC = () => {
                                 <div className="flex gap-1">
                                    <button 
                                       onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportPositive: {...prev.formData.reportPositive, has: true}}}))}
-                                      className={`px-3 py-1 text-xs font-bold rounded ${state.formData.reportPositive.has ? 'bg-green-600 text-white' : 'bg-gray-200'}`}
+                                      className={`px-3 py-1 text-xs font-bold rounded ${state.formData.reportPositive?.has ? 'bg-green-600 text-white' : 'bg-gray-200'}`}
                                    >SIM</button>
                                    <button 
-                                      onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportNegative: {...prev.formData.reportNegative, has: false}}}))}
-                                      className={`px-3 py-1 text-xs font-bold rounded ${!state.formData.reportPositive.has ? 'bg-gray-600 text-white' : 'bg-gray-200'}`}
+                                      onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportPositive: {...prev.formData.reportPositive, has: false}}}))}
+                                      className={`px-3 py-1 text-xs font-bold rounded ${!state.formData.reportPositive?.has ? 'bg-gray-600 text-white' : 'bg-gray-200'}`}
                                    >NÃO</button>
                                 </div>
                              </div>
@@ -1707,8 +1709,8 @@ const App: React.FC = () => {
                                 type="text" 
                                 className="input" 
                                 placeholder="Quais?"
-                                disabled={!state.formData.reportPositive.has}
-                                value={state.formData.reportPositive.text}
+                                disabled={!state.formData.reportPositive?.has}
+                                value={state.formData.reportPositive?.text || ''}
                                 onChange={(e) => setState(prev => ({...prev, formData: {...prev.formData, reportPositive: {...prev.formData.reportPositive, text: e.target.value}}}))}
                              />
                           </div>
@@ -1719,11 +1721,11 @@ const App: React.FC = () => {
                                 <div className="flex gap-1">
                                    <button 
                                       onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportNegative: {...prev.formData.reportNegative, has: true}}}))}
-                                      className={`px-3 py-1 text-xs font-bold rounded ${state.formData.reportNegative.has ? 'bg-gray-600 text-white' : 'bg-gray-200'}`}
+                                      className={`px-3 py-1 text-xs font-bold rounded ${state.formData.reportNegative?.has ? 'bg-gray-600 text-white' : 'bg-gray-200'}`}
                                    >SIM</button>
                                    <button 
                                       onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportNegative: {...prev.formData.reportNegative, has: false}}}))}
-                                      className={`px-3 py-1 text-xs font-bold rounded ${!state.formData.reportNegative.has ? 'bg-red-600 text-white' : 'bg-gray-200'}`}
+                                      className={`px-3 py-1 text-xs font-bold rounded ${!state.formData.reportNegative?.has ? 'bg-red-600 text-white' : 'bg-gray-200'}`}
                                    >NÃO</button>
                                 </div>
                              </div>
@@ -1731,8 +1733,8 @@ const App: React.FC = () => {
                                 type="text" 
                                 className="input" 
                                 placeholder="Quais?"
-                                disabled={!state.formData.reportNegative.has}
-                                value={state.formData.reportNegative.text}
+                                disabled={!state.formData.reportNegative?.has}
+                                value={state.formData.reportNegative?.text || ''}
                                 onChange={(e) => setState(prev => ({...prev, formData: {...prev.formData, reportNegative: {...prev.formData.reportNegative, text: e.target.value}}}))}
                              />
                           </div>
@@ -1766,9 +1768,9 @@ const App: React.FC = () => {
                        <Camera size={18} /> 7. Registro Fotográfico
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                       {state.formData.reportPhotos.map((photo, index) => (
+                       {(state.formData.reportPhotos || []).map((photo, index) => (
                           <div key={index} className="flex flex-col gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50 relative">
-                             {state.formData.reportPhotos.length > 1 && (
+                             {(state.formData.reportPhotos || []).length > 1 && (
                                  <button 
                                      onClick={() => removePhotoField(index)} 
                                      className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
@@ -1792,7 +1794,7 @@ const App: React.FC = () => {
                        onClick={addPhotoField} 
                        className="mt-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white px-4 py-2 rounded font-bold flex items-center justify-center gap-2 text-sm w-full"
                     >
-                       <Plus size={16}/> Adicionar mais um registro fotográfico
+                       <Plus size={16}/> Adicionar mais um registo fotográfico
                     </button>
                  </div>
 
