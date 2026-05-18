@@ -67,7 +67,8 @@ const DEFAULT_FORM_DATA = {
   reportGuidance: 'HOUVE',
   reportDistribution: 'CONFORME NECESSIDADE',
   reportSuggestions: 'NADA A DECLARAR',
-  reportPhotos: ['', ''] // Começa com 2 campos de foto padrão
+  reportPhotos: ['', ''], 
+  reportFinalConsiderations: '' // Campo novo inicializado
 };
 
 const App: React.FC = () => {
@@ -101,7 +102,6 @@ const App: React.FC = () => {
   const [showEffSuggestions, setShowEffSuggestions] = useState(false);
   const [effSuggestions, setEffSuggestions] = useState<Soldier[]>([]);
   
-  // Estado atualizado para incluir o tipo de serviço no Relatório
   const [newEffItem, setNewEffItem] = useState<{ soldier: Soldier | null, status: string, ubm: string, serviceType: string }>({ 
       soldier: null, status: 'P', ubm: UBMS[0], serviceType: 'PREVENCAO' 
   });
@@ -131,11 +131,9 @@ const App: React.FC = () => {
     ubm: UBMS[0]
   });
 
-  // Estados para Drag and Drop
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [draggedReportIndex, setDraggedReportIndex] = useState<number | null>(null);
 
-  // 1. Carregar Dados ao Iniciar (Blindado contra crashes)
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
@@ -144,7 +142,6 @@ const App: React.FC = () => {
         setState(prev => ({ 
           ...prev, 
           ...parsed, 
-          // A linha abaixo funde os dados originais com os salvos, garantindo que o reportPhotos nunca fique vazio!
           formData: { ...prev.formData, ...(parsed.formData || {}) },
           personnelDb: prev.personnelDb 
         }));
@@ -164,7 +161,6 @@ const App: React.FC = () => {
     return () => clearTimeout(saveData);
   }, [state]);
 
-  // --- SINCRONIZAÇÃO AUTOMÁTICA: NOME DO EVENTO ---
   useEffect(() => {
      if (state.formData.eventName) {
          setState(prev => ({
@@ -174,7 +170,6 @@ const App: React.FC = () => {
      }
   }, [state.formData.eventName]);
 
-  // --- SINCRONIZAÇÃO AUTOMÁTICA: RELATÓRIO -> PLANILHA ---
   useEffect(() => {
     const reportItems = state.formData.reportEffectiveItems || [];
     const costItems = state.formData.costSheetItems || [];
@@ -240,7 +235,6 @@ const App: React.FC = () => {
     }
   }, [state.formData.reportEffectiveItems, state.formData.eventDate]);
 
-  // --- FUNÇÕES DE DRAG AND DROP (PLANILHA) ---
   const handleDragStart = (e: React.DragEvent, index: number) => setDraggedIndex(index);
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
@@ -256,7 +250,6 @@ const App: React.FC = () => {
     setDraggedIndex(null);
   };
 
-  // --- FUNÇÕES DE DRAG AND DROP (RELATÓRIO) ---
   const handleReportDragStart = (e: React.DragEvent, index: number) => setDraggedReportIndex(index);
   const handleReportDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleReportDrop = (e: React.DragEvent, dropIndex: number) => {
@@ -272,7 +265,6 @@ const App: React.FC = () => {
     setDraggedReportIndex(null);
   };
 
-  // --- FUNÇÕES DE FOTO ---
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1538,7 +1530,7 @@ const App: React.FC = () => {
                                ))}
                             </tbody>
                          </table>
-                       </div>
+                      </div>
                     )}
                  </div>
 
@@ -1794,8 +1786,22 @@ const App: React.FC = () => {
                        onClick={addPhotoField} 
                        className="mt-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white px-4 py-2 rounded font-bold flex items-center justify-center gap-2 text-sm w-full"
                     >
-                       <Plus size={16}/> Adicionar mais um registo fotográfico
+                       <Plus size={16}/> Adicionar mais um registro fotográfico
                     </button>
+                 </div>
+
+                 {/* 8. CONSIDERAÇÕES FINAIS (NOVO CAMPO AQUI!) */}
+                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="section-title text-cbmpa-800">8. Considerações Finais</h3>
+                    <div className="mt-4">
+                       <label className="label">TEXTO DAS CONSIDERAÇÕES FINAIS</label>
+                       <textarea 
+                          className="input h-24" 
+                          placeholder="Digite aqui as considerações finais do relatório..."
+                          value={state.formData.reportFinalConsiderations || ''} 
+                          onChange={(e) => handleInputChange('reportFinalConsiderations', e.target.value)} 
+                       />
+                    </div>
                  </div>
 
               </div>
