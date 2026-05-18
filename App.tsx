@@ -3,7 +3,7 @@ import {
   Flame, Sun, Moon, FileText, DollarSign, ClipboardList, 
   Share2, Upload, Wifi, WifiOff, Database, CheckCircle2, 
   User, Search, Plus, X, Star, Trash2, Check, Download,
-  GripVertical
+  GripVertical, Camera
 } from 'lucide-react';
 import { AppState, DocumentType, Soldier, CostSheetItem, ReportEffectiveItem, ReportServiceItem } from './types';
 import { RANKS, UBMS, UNIT_VALUE_DEFAULT, EXTERNAL_DB_URL, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES } from './constants';
@@ -66,7 +66,8 @@ const DEFAULT_FORM_DATA = {
   reportActivities: '',
   reportGuidance: 'HOUVE',
   reportDistribution: 'CONFORME NECESSIDADE',
-  reportSuggestions: 'NADA A DECLARAR'
+  reportSuggestions: 'NADA A DECLARAR',
+  reportPhotos: ['', ''] // Começa com 2 campos de foto padrão
 };
 
 const App: React.FC = () => {
@@ -99,7 +100,11 @@ const App: React.FC = () => {
   const [effSearchTerm, setEffSearchTerm] = useState('');
   const [showEffSuggestions, setShowEffSuggestions] = useState(false);
   const [effSuggestions, setEffSuggestions] = useState<Soldier[]>([]);
-  const [newEffItem, setNewEffItem] = useState<{ soldier: Soldier | null, status: string, ubm: string }>({ soldier: null, status: 'F', ubm: UBMS[0] });
+  
+  // Estado atualizado para incluir o tipo de serviço no Relatório
+  const [newEffItem, setNewEffItem] = useState<{ soldier: Soldier | null, status: string, ubm: string, serviceType: string }>({ 
+      soldier: null, status: 'P', ubm: UBMS[0], serviceType: 'PREVENCAO' 
+  });
 
   const [newSvcItem, setNewSvcItem] = useState<Partial<ReportServiceItem>>({ sex: 'M', condition: 'ILS', code: '1' });
 
@@ -112,7 +117,6 @@ const App: React.FC = () => {
   const [commanderSelectionContext, setCommanderSelectionContext] = useState<'COST' | 'REPORT'>('COST');
 
   const [costDateInput, setCostDateInput] = useState('');
-  const [costMonthInput, setCostMonthInput] = useState('');
   const [newCostDatesList, setNewCostDatesList] = useState<string[]>([]);
 
   const [newCostItem, setNewCostItem] = useState<{
@@ -127,10 +131,10 @@ const App: React.FC = () => {
     ubm: UBMS[0]
   });
 
-  // Estado para o Drag and Drop
+  // Estados para Drag and Drop
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedReportIndex, setDraggedReportIndex] = useState<number | null>(null);
 
-  // 1. Carregar Dados ao Iniciar
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
@@ -141,7 +145,6 @@ const App: React.FC = () => {
           ...parsed, 
           personnelDb: prev.personnelDb 
         }));
-        
         if (parsed.formData?.issuerName) setIssuerSearchTerm(parsed.formData.issuerName);
       } catch (e) {
         console.error("Erro ao carregar dados salvos", e);
@@ -149,16 +152,24 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // 2. Auto-Save
   useEffect(() => {
     const saveData = setTimeout(() => {
       const stateToSave = { ...state, personnelDb: [] };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
       setLastSavedTime(new Date());
     }, 1000); 
-
     return () => clearTimeout(saveData);
   }, [state]);
+
+  // --- SINCRONIZAÇÃO AUTOMÁTICA: NOME DO EVENTO ---
+  useEffect(() => {
+     if (state.formData.eventName) {
+         setState(prev => ({
+            ...prev,
+            formData: { ...prev.formData, operationName: prev.formData.eventName }
+         }));
+     }
+  }, [state.formData.eventName]);
 
   // --- SINCRONIZAÇÃO AUTOMÁTICA: RELATÓRIO -> PLANILHA ---
   useEffect(() => {
@@ -168,7 +179,6 @@ const App: React.FC = () => {
     let needsUpdate = false;
     let newCostItems = [...costItems];
 
-    // 1. Remover da planilha quem marcou FALTA (F) ou DISPENSA (D) no relatório
     const invalidMatriculas = reportItems
         .filter(r => r.status === 'F' || r.status === 'D')
         .map(r => r.soldierMf);
@@ -179,7 +189,6 @@ const App: React.FC = () => {
         needsUpdate = true;
     }
 
-    // 2. Adicionar na planilha quem está válido (P, P/A, A) e ainda não está na lista
     const validReportItems = reportItems.filter(r => r.status !== 'F' && r.status !== 'D');
     
     validReportItems.forEach(reportItem => {
@@ -194,7 +203,7 @@ const App: React.FC = () => {
                 soldierUbm: reportItem.soldierUbm,
                 date: state.formData.eventDate || '', 
                 datesList: state.formData.eventDate ? [state.formData.eventDate] : [],
-                serviceType: 'PREVENCAO',
+                serviceType: (reportItem.serviceType as any) || 'PREVENCAO',
                 quantity: 1, 
                 unitValue: UNIT_VALUE_DEFAULT,
                 isCommander: reportItem.isCommander
@@ -202,10 +211,21 @@ const App: React.FC = () => {
             needsUpdate = true;
         } else {
             const idx = newCostItems.findIndex(c => c.soldierMatricula === reportItem.soldierMf);
+            let updated = false;
             if (newCostItems[idx].isCommander !== reportItem.isCommander) {
                 newCostItems[idx].isCommander = reportItem.isCommander;
-                needsUpdate = true;
+                updated = true;
             }
+            if (newCostItems[idx].serviceType !== reportItem.serviceType && reportItem.serviceType) {
+                newCostItems[idx].serviceType = reportItem.serviceType as any;
+                updated = true;
+            }
+            if (newCostItems[idx].date !== state.formData.eventDate) {
+                newCostItems[idx].date = state.formData.eventDate;
+                newCostItems[idx].datesList = state.formData.eventDate ? [state.formData.eventDate] : [];
+                updated = true;
+            }
+            if (updated) needsUpdate = true;
         }
     });
 
@@ -217,32 +237,66 @@ const App: React.FC = () => {
     }
   }, [state.formData.reportEffectiveItems, state.formData.eventDate]);
 
-  // --- FUNÇÕES DE DRAG AND DROP ---
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); 
-  };
-
+  // --- FUNÇÕES DE DRAG AND DROP (PLANILHA) ---
+  const handleDragStart = (e: React.DragEvent, index: number) => setDraggedIndex(index);
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === dropIndex) return;
-
     setState(prev => {
       const newItems = [...prev.formData.costSheetItems];
       const draggedItem = newItems[draggedIndex];
-      
       newItems.splice(draggedIndex, 1);
       newItems.splice(dropIndex, 0, draggedItem);
-      
-      return {
-        ...prev,
-        formData: { ...prev.formData, costSheetItems: newItems }
-      };
+      return { ...prev, formData: { ...prev.formData, costSheetItems: newItems } };
     });
     setDraggedIndex(null);
+  };
+
+  // --- FUNÇÕES DE DRAG AND DROP (RELATÓRIO) ---
+  const handleReportDragStart = (e: React.DragEvent, index: number) => setDraggedReportIndex(index);
+  const handleReportDragOver = (e: React.DragEvent) => e.preventDefault();
+  const handleReportDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedReportIndex === null || draggedReportIndex === dropIndex) return;
+    setState(prev => {
+      const newItems = [...prev.formData.reportEffectiveItems];
+      const draggedItem = newItems[draggedReportIndex];
+      newItems.splice(draggedReportIndex, 1);
+      newItems.splice(dropIndex, 0, draggedItem);
+      return { ...prev, formData: { ...prev.formData, reportEffectiveItems: newItems } };
+    });
+    setDraggedReportIndex(null);
+  };
+
+  // --- FUNÇÕES DE FOTO ---
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setState(prev => {
+        const newPhotos = [...prev.formData.reportPhotos];
+        newPhotos[index] = base64;
+        return { ...prev, formData: { ...prev.formData, reportPhotos: newPhotos } };
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addPhotoField = () => {
+    setState(prev => ({
+      ...prev,
+      formData: { ...prev.formData, reportPhotos: [...(prev.formData.reportPhotos || []), ''] }
+    }));
+  };
+
+  const removePhotoField = (index: number) => {
+    setState(prev => {
+      const newPhotos = prev.formData.reportPhotos.filter((_, i) => i !== index);
+      return { ...prev, formData: { ...prev.formData, reportPhotos: newPhotos } };
+    });
   };
 
   const handleExport = () => {
@@ -270,18 +324,14 @@ const App: React.FC = () => {
       try {
         const content = e.target?.result as string;
         const parsedState = JSON.parse(content);
-        
         if (!parsedState.formData) throw new Error("Arquivo inválido");
-
         if (confirm("Importar este arquivo substituirá os dados atuais. Deseja continuar?")) {
             setState(prev => ({
               ...prev,
               ...parsedState,
               personnelDb: prev.personnelDb
             }));
-
             if (parsedState.formData.issuerName) setIssuerSearchTerm(parsedState.formData.issuerName);
-            
             alert("Dados importados com sucesso!");
         }
       } catch (err) {
@@ -316,12 +366,6 @@ const App: React.FC = () => {
       }
     }));
     setTempMonthInput('');
-  };
-
-  const addCostMonth = () => {
-    if (!costMonthInput) return;
-    setNewCostDatesList(prev => [...new Set([...prev, costMonthInput])]);
-    setCostMonthInput('');
   };
 
   const normalizeRank = (csvRank: string): string => {
@@ -722,6 +766,7 @@ const App: React.FC = () => {
       soldierUbm: newEffItem.ubm,
       soldierMf: newEffItem.soldier.matricula,
       status: newEffItem.status as any,
+      serviceType: newEffItem.serviceType as any,
       isCommander: false
     };
     setState(prev => ({
@@ -729,7 +774,7 @@ const App: React.FC = () => {
       formData: { ...prev.formData, reportEffectiveItems: [...prev.formData.reportEffectiveItems, newItem] }
     }));
     setEffSearchTerm('');
-    setNewEffItem({ soldier: null, status: 'F', ubm: UBMS[0] });
+    setNewEffItem({ soldier: null, status: 'P', ubm: UBMS[0], serviceType: 'PREVENCAO' });
   };
 
   const removeEffectiveItem = (id: string) => {
@@ -825,31 +870,6 @@ const App: React.FC = () => {
         }
       };
     });
-  };
-
-  const handleAiRefine = async (field: keyof AppState['formData'], isNested = false, nestedKey?: string) => {
-    setIsAiLoading(true);
-    try {
-      let textToRefine = "";
-      if (isNested && nestedKey === 'positive') textToRefine = state.formData.reportPositive.text;
-      else if (isNested && nestedKey === 'negative') textToRefine = state.formData.reportNegative.text;
-      else textToRefine = String(state.formData[field]);
-
-      if (!textToRefine) return;
-
-      const refined = await refineText(textToRefine, state.currentDoc === DocumentType.MEMO ? 'memo' : 'report');
-      
-      if (isNested) {
-        if (nestedKey === 'positive') setState(prev => ({ ...prev, formData: { ...prev.formData, reportPositive: { ...prev.formData.reportPositive, text: refined } } }));
-        if (nestedKey === 'negative') setState(prev => ({ ...prev, formData: { ...prev.formData, reportNegative: { ...prev.formData.reportNegative, text: refined } } }));
-      } else {
-        handleInputChange(field, refined);
-      }
-    } catch (error) {
-      alert("Erro ao refinar texto com IA.");
-    } finally {
-      setIsAiLoading(false);
-    }
   };
 
   return (
@@ -1189,22 +1209,14 @@ const App: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* REMOVIDO "ADICIONAR MÊS INTEIRO" DAQUI */}
+                      <div className="grid grid-cols-1 gap-4">
                           <div>
                             <label className="label">2. ADICIONAR DATA INDIVIDUAL</label>
                             <div className="flex gap-2">
                                 <input type="date" className="input" value={costDateInput} onChange={(e) => setCostDateInput(e.target.value)} />
                                 <button onClick={addCostDate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded font-bold flex items-center gap-2 text-sm whitespace-nowrap">
                                   <Plus size={18}/> Adicionar Dia
-                                </button>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="label">3. ADICIONAR MÊS INTEIRO</label>
-                            <div className="flex gap-2">
-                                <input type="month" className="input" value={costMonthInput} onChange={(e) => setCostMonthInput(e.target.value)} />
-                                <button onClick={addCostMonth} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 rounded font-bold flex items-center gap-2 text-sm whitespace-nowrap">
-                                  <Plus size={18}/> Adicionar Mês
                                 </button>
                             </div>
                           </div>
@@ -1224,7 +1236,7 @@ const App: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                           <div>
-                             <label className="label">4. ESCOLHA O TIPO DE SERVIÇO</label>
+                             <label className="label">3. ESCOLHA O TIPO DE SERVIÇO</label>
                              <select className="input" value={newCostItem.serviceType} onChange={(e) => setNewCostItem({...newCostItem, serviceType: e.target.value})}>
                                 <option value="DIVERSOS">Serviços Diversos</option>
                                 <option value="PREVENCAO">Prevenção Desportiva</option>
@@ -1334,7 +1346,7 @@ const App: React.FC = () => {
                  
                  {/* 1. HEADER */}
                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <h3 className="section-title text-cbmpa-800">1. Dados Iniciais</h3>
+                    <h3 className="section-title text-cbmpa-800">1. Dados Iniciais (Sincronizado com Planilha)</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <div>
                           <label className="label">NOME DO EVENTO</label>
@@ -1427,9 +1439,9 @@ const App: React.FC = () => {
 
                  {/* 2. EFFECTIVE TABLE */}
                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <h3 className="section-title text-cbmpa-800">2. Alterações no Efetivo (Selecione o Cmt aqui)</h3>
+                    <h3 className="section-title text-cbmpa-800">2. Alterações no Efetivo</h3>
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded items-end">
-                       <div className="md:col-span-6 relative">
+                       <div className="md:col-span-4 relative">
                           <label className="label">BUSCAR MILITAR</label>
                           <input type="text" className="input" placeholder="Nome/Matrícula..." value={effSearchTerm} onChange={handleEffSearchChange} />
                           {showEffSuggestions && (
@@ -1445,6 +1457,15 @@ const App: React.FC = () => {
                           </select>
                        </div>
                        <div className="md:col-span-2">
+                          <label className="label">SV.</label>
+                          <select className="input" value={newEffItem.serviceType} onChange={(e) => setNewEffItem({...newEffItem, serviceType: e.target.value})}>
+                             <option value="DIVERSOS">DIV</option>
+                             <option value="PREVENCAO">PREV</option>
+                             <option value="GUARDA_VIDAS">GV</option>
+                             <option value="CORTE_VEGETAL">CORTE</option>
+                          </select>
+                       </div>
+                       <div className="md:col-span-2">
                           <label className="label">SITUAÇÃO</label>
                           <select className="input" value={newEffItem.status} onChange={(e) => setNewEffItem({...newEffItem, status: e.target.value})}>
                              <option value="P">PRESENTE</option>
@@ -1456,7 +1477,7 @@ const App: React.FC = () => {
                        </div>
                        <div className="md:col-span-2">
                           <button onClick={addEffectiveItem} disabled={!newEffItem.soldier} className="bg-cbmpa-600 text-white w-full h-[42px] rounded font-bold disabled:opacity-50 text-xs uppercase flex items-center justify-center gap-1">
-                             <Plus size={14} /> Adicionar Militar
+                             <Plus size={14} /> Inserir
                           </button>
                        </div>
                     </div>
@@ -1469,13 +1490,21 @@ const App: React.FC = () => {
                                   <th className="p-2 text-left">Posto/Grad</th>
                                   <th className="p-2 text-left">Nome</th>
                                   <th className="p-2 text-center">UBM</th>
+                                  <th className="p-2 text-center">SV.</th>
                                   <th className="p-2 text-center">Situação</th>
                                   <th className="p-2 text-center">Ação</th>
                                </tr>
                             </thead>
                             <tbody>
-                               {state.formData.reportEffectiveItems.map(item => (
-                                  <tr key={item.id} className="border-b border-gray-100 dark:border-gray-700">
+                               {state.formData.reportEffectiveItems.map((item, index) => (
+                                  <tr 
+                                      key={item.id} 
+                                      draggable
+                                      onDragStart={(e) => handleReportDragStart(e, index)}
+                                      onDragOver={handleReportDragOver}
+                                      onDrop={(e) => handleReportDrop(e, index)}
+                                      className={`border-b border-gray-100 dark:border-gray-700 ${draggedReportIndex === index ? 'opacity-40 bg-gray-200 cursor-grabbing' : 'cursor-grab'}`}
+                                  >
                                      <td className="p-2 text-center">
                                         <button onClick={() => initiateCommanderSelection(item.id, 'REPORT')} className={`p-1 rounded hover:bg-yellow-100 ${item.isCommander ? 'text-yellow-500' : 'text-gray-300'}`}>
                                            <Star size={16} fill={item.isCommander ? "currentColor" : "none"}/>
@@ -1484,6 +1513,12 @@ const App: React.FC = () => {
                                      <td className="p-2">{item.soldierRank}</td>
                                      <td className="p-2 font-medium">{item.soldierName}</td>
                                      <td className="p-2 text-center text-xs text-gray-500">{item.soldierUbm}</td>
+                                     <td className="p-2 text-center text-xs">
+                                        {item.serviceType === 'DIVERSOS' && 'DIV'}
+                                        {item.serviceType === 'PREVENCAO' && 'PREV'}
+                                        {item.serviceType === 'GUARDA_VIDAS' && 'GV'}
+                                        {item.serviceType === 'CORTE_VEGETAL' && 'CORTE'}
+                                     </td>
                                      <td className="p-2 text-center font-bold">
                                         {item.status === 'P' && 'PRESENTE'}
                                         {item.status === 'F' && 'FALTA'}
@@ -1491,8 +1526,11 @@ const App: React.FC = () => {
                                         {item.status === 'P/A' && 'PERMUTA'}
                                         {item.status === 'A' && 'ATRASO'}
                                      </td>
-                                     <td className="p-2 text-center">
-                                          <button onClick={() => removeEffectiveItem(item.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14}/></button>
+                                     <td className="p-2 flex justify-center items-center gap-2">
+                                        <div title="Segure para arrastar" className="text-gray-400 hover:text-gray-600 active:text-blue-600 flex items-center justify-center">
+                                            <GripVertical size={16} />
+                                        </div>
+                                        <button onClick={() => removeEffectiveItem(item.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14}/></button>
                                      </td>
                                   </tr>
                                ))}
@@ -1660,7 +1698,7 @@ const App: React.FC = () => {
                                       className={`px-3 py-1 text-xs font-bold rounded ${state.formData.reportPositive.has ? 'bg-green-600 text-white' : 'bg-gray-200'}`}
                                    >SIM</button>
                                    <button 
-                                      onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportPositive: {...prev.formData.reportPositive, has: false}}}))}
+                                      onClick={() => setState(prev => ({...prev, formData: {...prev.formData, reportNegative: {...prev.formData.reportNegative, has: false}}}))}
                                       className={`px-3 py-1 text-xs font-bold rounded ${!state.formData.reportPositive.has ? 'bg-gray-600 text-white' : 'bg-gray-200'}`}
                                    >NÃO</button>
                                 </div>
@@ -1721,6 +1759,43 @@ const App: React.FC = () => {
                        </div>
                     </div>
                  </div>
+
+                 {/* 7. PHOTOS */}
+                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="section-title text-cbmpa-800 flex items-center gap-2">
+                       <Camera size={18} /> 7. Registro Fotográfico
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                       {state.formData.reportPhotos.map((photo, index) => (
+                          <div key={index} className="flex flex-col gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50 relative">
+                             {state.formData.reportPhotos.length > 1 && (
+                                 <button 
+                                     onClick={() => removePhotoField(index)} 
+                                     className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                                     title="Remover Foto"
+                                 >
+                                     <Trash2 size={16}/>
+                                 </button>
+                             )}
+                             <label className="label">FOTO {index + 1}</label>
+                             <input 
+                                 type="file" 
+                                 accept="image/*" 
+                                 onChange={(e) => handlePhotoUpload(e, index)} 
+                                 className="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                             />
+                             {photo && <img src={photo} alt={`Foto ${index + 1}`} className="w-full h-32 object-cover rounded border border-gray-200 mt-2" />}
+                          </div>
+                       ))}
+                    </div>
+                    <button 
+                       onClick={addPhotoField} 
+                       className="mt-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white px-4 py-2 rounded font-bold flex items-center justify-center gap-2 text-sm w-full"
+                    >
+                       <Plus size={16}/> Adicionar mais um registro fotográfico
+                    </button>
+                 </div>
+
               </div>
             )}
           </div>

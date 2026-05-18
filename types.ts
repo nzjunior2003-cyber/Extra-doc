@@ -1,4 +1,3 @@
-
 export enum DocumentType {
   MEMO = 'MEMORANDO',
   REPORT = 'RELATÓRIO',
@@ -44,6 +43,7 @@ export interface ReportEffectiveItem {
   soldierMf: string; // Matricula
   status: 'P' | 'F' | 'D' | 'P/A' | 'A';
   isCommander?: boolean;
+  serviceType?: 'DIVERSOS' | 'PREVENCAO' | 'GUARDA_VIDAS' | 'CORTE_VEGETAL'; // <-- ADICIONADO AQUI
 }
 
 // Section 3: Service Alterations (Victims)
@@ -124,7 +124,10 @@ export interface AppState {
     reportGuidance: string; // Serviços de preventivo/orientação
     reportDistribution: string; // Distribuição do efetivo
     reportSuggestions: string;
-    reportFinalConsiderations: string;
+    reportFinalConsiderations?: string;
+    
+    // Registro Fotográfico
+    reportPhotos: string[]; // <-- ADICIONADO AQUI PARA AS FOTOS
   };
 }
 
