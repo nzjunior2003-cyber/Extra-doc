@@ -272,4 +272,317 @@ export const generatePDF = (state: AppState) => {
         doc.text(`BELÉM-PA, ${dateString.toUpperCase()}`, 280, dateY, { align: "right" });
         
         const signatureY = dateY + 20; 
-        drawSignatureWithBoldHighlight(doc, cmtName, cmtWarName, cmtRank, 148.5, signatureY
+        drawSignatureWithBoldHighlight(doc, cmtName, cmtWarName, cmtRank, 148.5, signatureY);
+        doc.setFont("helvetica", "normal");
+        doc.text("COMANDANTE DA PREVENÇÃO", 148.5, signatureY + 4, { align: "center" });
+      }
+      pageNum++;
+    }
+    window.open(doc.output('bloburl'), '_blank');
+  }
+
+  else if (state.currentDoc === DocumentType.REPORT) {
+    const doc = new jsPDF();
+    addCbmpaHeader(doc);
+    
+    const effList = formData.reportEffectiveItems || [];
+    const counts = {
+      f: effList.filter(i => i.status === 'F').length,
+      pa: effList.filter(i => i.status === 'P/A').length,
+      d: effList.filter(i => i.status === 'D').length,
+      a: effList.filter(i => i.status === 'A').length,
+      total: effList.length
+    };
+
+    doc.setFillColor(255, 255, 0);
+    doc.rect(10, 32, 190, 10, 'F');
+    doc.setDrawColor(0);
+    doc.rect(10, 32, 190, 10);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("RELATÓRIO DE PREVENÇÃO – JORNADA OPERACIONAL EXTRAORDINÁRIA", 105, 38.5, { align: "center" });
+
+    let currentY = 45;
+    const drawSectionHeader = (title: string, y: number, width = 190, x = 10) => {
+      doc.setFillColor(220, 220, 220);
+      doc.rect(x, y, width, 6, 'F');
+      doc.rect(x, y, width, 6);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text(title, x + (width / 2), y + 4.5, { align: "center" });
+      return y + 6;
+    };
+    const drawGridRow = (y: number, height: number, cols: { width: number, label: string, value: string }[]) => {
+      let currentX = 10;
+      doc.setFontSize(8);
+      cols.forEach((col) => {
+         doc.setDrawColor(0);
+         doc.rect(currentX, y, col.width, height);
+         doc.setFont("helvetica", "bold");
+         doc.text(col.label, currentX + 2, y + 4);
+         doc.setFont("helvetica", "normal");
+         const labelWidth = doc.getTextWidth(col.label);
+         doc.text(col.value || "", currentX + 2 + labelWidth + 2, y + 4);
+         currentX += col.width;
+      });
+      return y + height;
+    };
+
+    currentY = drawSectionHeader("1. DADOS INICIAIS", currentY);
+    currentY = drawGridRow(currentY, 7, [{ width: 190, label: "NOME DO EVENTO:", value: formData.eventName }]);
+    currentY = drawGridRow(currentY, 7, [
+        { width: 140, label: "CMT. DA PREVENÇÃO:", value: `${formData.issuerRank.toUpperCase()} ${formData.issuerName}` },
+        { width: 50, label: "UBM:", value: formData.issuerUbm }
+    ]);
+    currentY = drawGridRow(currentY, 7, [{ width: 190, label: "LOCAL DO EVENTO:", value: formData.eventLocal }]);
+    currentY = drawGridRow(currentY, 7, [
+        { width: 95, label: "DATA DO EVENTO:", value: formatDate(formData.eventDate) },
+        { width: 95, label: "DIA DA SEMANA:", value: formData.eventDayOfWeek }
+    ]);
+    currentY = drawGridRow(currentY, 7, [{ width: 190, label: "HORÁRIO NO EVENTO:", value: `${formData.eventStartTime} AS ${formData.eventEndTime}` }]);
+    currentY = drawGridRow(currentY, 7, [
+        { width: 95, label: "TOTAL EFETIVO:", value: `${counts.total} BM's` }, 
+        { width: 95, label: "REFERÊNCIA:", value: `NS Nº ${formData.memoNs}` }
+    ]);
+    currentY = drawGridRow(currentY, 7, [{ width: 190, label: "", value: `Nº FALTAS: (${counts.f}) - Nº PERMUTA: (${counts.pa}) - Nº DISPENSA: (${counts.d}) - Nº ATRASO: (${counts.a})` }]);
+    currentY = drawGridRow(currentY, 7, [
+        { width: 95, label: "MÉDIA ESTIMADA DE PÚBLICO:", value: formData.eventPublicEstimate },
+        { width: 95, label: "Nº SISCOB:", value: formData.siscobNumber }
+    ]);
+    currentY = drawGridRow(currentY, 7, [{ width: 190, label: "ANEXOS:", value: "ESCALA GERAL/CÓPIA DA NOTA/ ORDEM DE SERVIÇO." }]);
+    currentY += 2;
+
+    currentY = drawSectionHeader("2. ALTERAÇÕES NO EFETIVO EMPREGADO - SIM ( ) NÃO ( )", currentY);
+    doc.autoTable({
+      startY: currentY,
+      head: [['ORD', 'POST/GRAD', 'NOME GUERRA DO MILITAR', 'UBM', 'MF (OBRIGATÓRIO)', 'P', 'F', 'D', 'P/A', 'A']],
+      body: formData.reportEffectiveItems.map((item, i) => [
+        (i+1).toString(), item.soldierRank, item.soldierName, item.soldierUbm, item.soldierMf,
+        item.status === 'P' ? 'X' : '', item.status === 'F' ? 'X' : '', item.status === 'D' ? 'X' : '', item.status === 'P/A' ? 'X' : '', item.status === 'A' ? 'X' : '']
+      ),
+      theme: 'grid',
+      styles: { fontSize: 7, halign: 'center', lineColor: 0, textColor: 0 },
+      headStyles: { fillColor: [220, 220, 220], textColor: 0 },
+      margin: { left: 10, right: 10 },
+    });
+    currentY = doc.lastAutoTable.finalY + 1;
+    doc.setFontSize(6);
+    doc.text("LEGENDA: P(PRESENÇA) - F(FALTA) - D(DISPENSA) - P/A(PERMUTA/AUTORIZAÇÃO) - A(ATRASO)", 10, currentY + 2);
+    currentY += 4;
+
+    currentY = drawSectionHeader("3. ALTERAÇÕES NO SERVIÇO - SIM ( ) NÃO ( )", currentY);
+    doc.autoTable({
+      startY: currentY,
+      head: [['ORD', 'NOME', 'ID', 'SEXO (M)(F)', 'ILS', 'FD', 'FTL', 'CÓDIGO']],
+      body: formData.reportServiceItems.map((item, i) => [
+        (i+1).toString(), item.name, item.age, item.sex,
+        item.condition === 'ILS' ? 'X' : '', item.condition === 'FD' ? 'X' : '', item.condition === 'FTL' ? 'X' : '', item.code
+      ]),
+      theme: 'grid',
+      styles: { fontSize: 7, halign: 'center', lineColor: 0, textColor: 0 },
+      headStyles: { fillColor: [220, 220, 220], textColor: 0 },
+      margin: { left: 10, right: 10 },
+    });
+    currentY = doc.lastAutoTable.finalY + 2;
+    doc.setFontSize(6);
+    const codesText = OCCURRENCE_CODES.map(c => `${c.code}-${c.desc}`).join(' - ');
+    const splitCodes = doc.splitTextToSize("CÓDIGO OCORRÊNCIAS: " + codesText, 190);
+    doc.text(splitCodes, 10, currentY + 2);
+    currentY += (splitCodes.length * 3) + 2;
+
+    if (currentY > 200) { doc.addPage(); currentY = 20; }
+
+    currentY = drawSectionHeader("4. APOIO LOGÍSTICO - SIM ( ) NÃO ( )", currentY);
+    const allLogItems = [...REPORT_LOGISTICS_ITEMS];
+    if (formData.reportOtherLogistics) allLogItems.push('OUTROS: ' + formData.reportOtherLogistics);
+    const halfLen = Math.ceil(allLogItems.length / 2);
+    const logRows = [];
+    for (let i = 0; i < halfLen; i++) {
+        const leftItem = allLogItems[i];
+        const rightItem = allLogItems[i + halfLen];
+        const row = [];
+        const leftData = formData.reportLogistics[leftItem] || { used: false, qty: '' };
+        if (leftItem && leftItem.startsWith('OUTROS')) { leftData.used = true; leftData.qty = '1'; }
+        row.push(leftItem); row.push(leftData.used ? 'X' : ''); row.push(!leftData.used ? 'X' : ''); row.push(leftData.qty);
+        if (rightItem) {
+            const rightData = formData.reportLogistics[rightItem] || { used: false, qty: '' };
+            if (rightItem.startsWith('OUTROS')) { rightData.used = true; rightData.qty = '1'; }
+            row.push(rightItem); row.push(rightData.used ? 'X' : ''); row.push(!rightData.used ? 'X' : ''); row.push(rightData.qty);
+        } else { row.push('', '', '', ''); }
+        logRows.push(row);
+    }
+
+    doc.autoTable({
+      startY: currentY,
+      head: [['MATERIAL', 'S', 'N', 'QTD', 'MATERIAL', 'S', 'N', 'QTD']],
+      body: logRows,
+      theme: 'grid',
+      styles: { fontSize: 7, halign: 'center', lineColor: 0, textColor: 0, cellPadding: 1 },
+      headStyles: { fillColor: [220, 220, 220], textColor: 0 },
+      columnStyles: { 0: { halign: 'left', cellWidth: 40 }, 4: { halign: 'left', cellWidth: 40 } },
+      margin: { left: 10, right: 10 },
+    });
+    currentY = doc.lastAutoTable.finalY + 1;
+    doc.setFontSize(6);
+    doc.text("LEGENDA: S -SIM / N - NÃO / QTD - QUANTIDADE", 10, currentY + 2);
+    currentY += 4;
+
+    if (currentY > 230) { doc.addPage(); currentY = 20; }
+    currentY = drawSectionHeader("5. VIATURAS/EMBARCAÇÕES E AERONAVES - SIM ( ) NÃO ( )", currentY);
+    const allVtrItems = [...REPORT_VEHICLE_ITEMS];
+    if (formData.reportOtherVehicles) allVtrItems.push('OUTROS: ' + formData.reportOtherVehicles);
+    const halfVtrLen = Math.ceil(allVtrItems.length / 2);
+    const vtrRows = [];
+    for (let i = 0; i < halfVtrLen; i++) {
+        const leftItem = allVtrItems[i];
+        const rightItem = allVtrItems[i + halfVtrLen];
+        const row = [];
+        const leftData = formData.reportVehicles[leftItem] || { used: false, qty: '', origin: '' };
+        if (leftItem && leftItem.startsWith('OUTROS')) { leftData.used = true; leftData.qty = '1'; }
+        row.push(leftItem); row.push(leftData.used ? 'X' : ''); row.push(!leftData.used ? 'X' : ''); row.push(leftData.qty); row.push(leftData.origin);
+        if (rightItem) {
+            const rightData = formData.reportVehicles[rightItem] || { used: false, qty: '', origin: '' };
+            if (rightItem.startsWith('OUTROS')) { rightData.used = true; rightData.qty = '1'; }
+            row.push(rightItem); row.push(rightData.used ? 'X' : ''); row.push(!rightData.used ? 'X' : ''); row.push(rightData.qty); row.push(rightData.origin);
+        } else { row.push('', '', '', '', ''); }
+        vtrRows.push(row);
+    }
+    
+    doc.autoTable({
+      startY: currentY,
+      head: [['MATERIAL', 'S', 'N', 'QTD', 'ORIGEM', 'MATERIAL', 'S', 'N', 'QTD', 'ORIGEM']],
+      body: vtrRows,
+      theme: 'grid',
+      styles: { fontSize: 6, halign: 'center', lineColor: 0, textColor: 0, cellPadding: 1 },
+      headStyles: { fillColor: [220, 220, 220], textColor: 0 },
+      columnStyles: { 0: { halign: 'left', cellWidth: 35 }, 4: { halign: 'left', cellWidth: 15 }, 5: { halign: 'left', cellWidth: 35 }, 9: { halign: 'left', cellWidth: 15 } },
+      margin: { left: 10, right: 10 },
+    });
+    currentY = doc.lastAutoTable.finalY + 4;
+
+    if (currentY > 230) { doc.addPage(); currentY = 20; }
+    currentY = drawSectionHeader("6. CONSIDERAÇÕES DO SERVIÇO", currentY);
+    doc.setDrawColor(0);
+    const sec6StartY = currentY; 
+    doc.setFontSize(8);
+    
+    const drawDynamicFieldRow = (label: string, text: string, textX: number, maxWidth: number, drawLineBelow = true) => {
+      doc.setFont("helvetica", "bold");
+      doc.text(label, 12, currentY + 5);
+      doc.setFont("helvetica", "normal");
+      
+      const safeText = text || '';
+      const splitText = doc.splitTextToSize(safeText, maxWidth);
+      
+      doc.text(splitText, textX, currentY + 5, { align: "justify", maxWidth: maxWidth });
+      
+      const blockHeight = Math.max(5, splitText.length * 4);
+      currentY += blockHeight + 3; 
+      
+      if (drawLineBelow) {
+          doc.line(10, currentY, 200, currentY);
+      }
+    };
+
+    const positiveText = `SIM (${formData.reportPositive.has ? 'X' : ' '}) NÃO (${!formData.reportPositive.has ? 'X' : ' '}) - SE SIM, QUAIS: ${formData.reportPositive.text}`;
+    drawDynamicFieldRow("PONTOS POSITIVO:", positiveText, 50, 145, false);
+    
+    const negativeText = `SIM (${formData.reportNegative.has ? 'X' : ' '}) NÃO (${!formData.reportNegative.has ? 'X' : ' '}) - SE SIM, QUAIS: ${formData.reportNegative.text}`;
+    drawDynamicFieldRow("PONTOS NEGATIVO:", negativeText, 50, 145, true);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("QUADRO DE ATIVIDADES SERVIÇO:", 12, currentY + 5);
+    doc.setFont("helvetica", "normal");
+    const activitiesText = formData.reportActivities || '';
+    const splitActivities = doc.splitTextToSize(activitiesText, 185);
+    doc.text(splitActivities, 12, currentY + 9, { align: "justify", maxWidth: 185 });
+    currentY += 9 + (splitActivities.length * 4);
+    doc.line(10, currentY, 200, currentY);
+
+    drawDynamicFieldRow("SERVIÇOS DE PREVENTIVO DE ORIENTAÇÃO E ADVERTÊNCIA:", formData.reportGuidance || '', 110, 85, true);
+    drawDynamicFieldRow("DISTRIBUIÇÃO DO EFETIVO:", formData.reportDistribution || '', 60, 135, true);
+    drawDynamicFieldRow("SUGESTÕES:", formData.reportSuggestions || '', 40, 155, false);
+
+    doc.rect(10, sec6StartY, 190, currentY - sec6StartY);
+    currentY += 5;
+
+    // =========================================================================
+    // 7. REGISTRO FOTOGRÁFICO
+    // =========================================================================
+    if (currentY > 230) { doc.addPage(); currentY = 20; }
+    currentY = drawSectionHeader("7. REGISTRO FOTOGRÁFICO", currentY);
+
+    const validPhotos = (formData.reportPhotos || []).filter(p => p.trim() !== '');
+
+    if (validPhotos.length === 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text("NENHUM REGISTRO FOTOGRÁFICO INSERIDO.", 12, currentY + 5);
+      currentY += 12;
+    } else {
+      currentY += 5; 
+      const photoWidth = 85;
+      const photoHeight = 60; 
+      const marginX = 15;
+      const spacingX = 10; 
+
+      for (let i = 0; i < validPhotos.length; i++) {
+        const isNewRow = i % 2 === 0;
+        
+        if (isNewRow && currentY + photoHeight > 270) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        const colIndex = i % 2;
+        const xPos = marginX + (colIndex * (photoWidth + spacingX));
+
+        try {
+          let format = 'JPEG';
+          if (validPhotos[i].startsWith('data:image/png')) format = 'PNG';
+          if (validPhotos[i].startsWith('data:image/webp')) format = 'WEBP';
+          
+          doc.addImage(validPhotos[i], format, xPos, currentY, photoWidth, photoHeight);
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(xPos, currentY, photoWidth, photoHeight);
+        } catch (error) {
+          console.error("Erro ao adicionar imagem ao PDF:", error);
+          doc.setFontSize(8);
+          doc.text("[Erro ao carregar imagem]", xPos + 2, currentY + 10);
+        }
+
+        if (colIndex === 1 || i === validPhotos.length - 1) {
+          currentY += photoHeight + 10; 
+        }
+      }
+    }
+
+    // =========================================================================
+    // 8. CONSIDERAÇÕES FINAIS
+    // =========================================================================
+    if (currentY > 250) { doc.addPage(); currentY = 20; }
+    currentY = drawSectionHeader("8. CONSIDERAÇÕES FINAIS", currentY);
+    
+    const finalConsiderations = formData.reportFinalConsiderations || 'NADA A DECLARAR';
+    const splitFinal = doc.splitTextToSize(finalConsiderations, 185);
+    
+    const boxHeight = Math.max(25, (splitFinal.length * 4) + 6);
+    doc.rect(10, currentY, 190, boxHeight);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(splitFinal, 12, currentY + 5, { align: "justify", maxWidth: 185 });
+    
+    currentY += boxHeight + 5;
+    
+    if (currentY > 230) { doc.addPage(); currentY = 40; }
+    doc.setFontSize(9);
+    doc.text(`BELÉM – PA, ${dateString}`, 190, currentY, { align: "right" });
+    currentY += 50; 
+    drawSignatureWithBoldHighlight(doc, formData.issuerName, formData.issuerWarName, formData.issuerRank, 105, currentY);
+    doc.setFont("helvetica", "normal");
+    doc.text("CMT DA OPERAÇÃO/EXTRAORDINÁRIA", 105, currentY + 5, { align: "center" });
+
+    window.open(doc.output('bloburl'), '_blank');
+  }
+};
