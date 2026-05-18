@@ -41,8 +41,8 @@ export const UBMS = [
   "QCG"
 ];
 
-// Value per day/service from the screenshot (R$ 204,87)
-export const UNIT_VALUE_DEFAULT = 204.87;
+// Value per day/service from the screenshot (R$ 217,16)
+export const UNIT_VALUE_DEFAULT = 217.16;
 
 // Link para exportar a planilha como CSV
 export const EXTERNAL_DB_URL = "https://docs.google.com/spreadsheets/d/1Ja9mQVJ4KWkFtjNBjuoSONnKoj2GIT7ltUYAByLetrg/export?format=csv";
