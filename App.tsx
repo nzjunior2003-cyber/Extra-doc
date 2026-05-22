@@ -3,7 +3,7 @@ import {
   Flame, Sun, Moon, FileText, DollarSign, ClipboardList, 
   Share2, Upload, Wifi, WifiOff, Database, CheckCircle2, 
   User, Search, Plus, X, Star, Trash2, Check, Download,
-  GripVertical, Camera
+  GripVertical, Camera, Eraser
 } from 'lucide-react';
 import { AppState, DocumentType, Soldier, CostSheetItem, ReportEffectiveItem, ReportServiceItem } from './types';
 import { RANKS, UBMS, UNIT_VALUE_DEFAULT, EXTERNAL_DB_URL, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES } from './constants';
@@ -68,7 +68,7 @@ const DEFAULT_FORM_DATA = {
   reportDistribution: 'CONFORME NECESSIDADE',
   reportSuggestions: 'NADA A DECLARAR',
   reportPhotos: ['', ''], 
-  reportFinalConsiderations: '' // Campo novo inicializado
+  reportFinalConsiderations: '' 
 };
 
 const App: React.FC = () => {
@@ -865,6 +865,22 @@ const App: React.FC = () => {
         }
       };
     });
+  };
+
+  // 🧹 FUNÇÃO PARA LIMPAR TODO O FORMULÁRIO
+  const handleClearForm = () => {
+    if (window.confirm('Tem a certeza que deseja limpar todos os dados do formulário? Esta ação não pode ser desfeita.')) {
+      setState(prev => ({
+        ...prev,
+        formData: JSON.parse(JSON.stringify(DEFAULT_FORM_DATA))
+      }));
+      setIssuerSearchTerm('');
+      setRecipientSearchTerm('');
+      setCostSearchTerm('');
+      setEffSearchTerm('');
+      setNewCostDatesList([]);
+      setCostDateInput('');
+    }
   };
 
   return (
@@ -1790,7 +1806,7 @@ const App: React.FC = () => {
                     </button>
                  </div>
 
-                 {/* 8. CONSIDERAÇÕES FINAIS (NOVO CAMPO AQUI!) */}
+                 {/* 8. CONSIDERAÇÕES FINAIS */}
                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="section-title text-cbmpa-800">8. Considerações Finais</h3>
                     <div className="mt-4">
@@ -1811,6 +1827,18 @@ const App: React.FC = () => {
 
         {/* Floating Actions */}
         <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+           
+           <button 
+             onClick={handleClearForm}
+             className="bg-gray-600 hover:bg-gray-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 group z-50"
+             title="Limpar Formulário"
+           >
+             <Eraser size={24} />
+             <span className="absolute right-full mr-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity">
+                Limpar Tudo
+             </span>
+           </button>
+
            <button 
              onClick={() => generatePDF(state)}
              className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 group z-50"
