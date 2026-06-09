@@ -391,16 +391,17 @@ const App: React.FC = () => {
       if (r.includes("QOABM")) return "2º TEN QOABM";
       return "2º TEN QOBM";
     }
-    if (r.includes("ALUNO CURSO") || r.includes("FORMACAO DE SOLDADO")) return "AL CFP";
+    if (r.includes("ALUNO CURSO") || r.includes("FORMACAO DE SOLDADO")) return "AL CFP BM";
     if (r.includes("ALUNO OFICIAL")) return "AL OF BM";
     if (r.includes("ASPIRANTE")) return "ASP OF BM";
     if (r.includes("CADETE")) return "AL OF BM";
-    if (r.includes("SUB") && r.includes("TENENTE")) return "ST QBM";
-    if (r.includes("1 SARGENTO") || r.includes("1º SARGENTO")) return "1º SGT QBM";
-    if (r.includes("2 SARGENTO") || r.includes("2º SARGENTO")) return "2º SGT QBM";
-    if (r.includes("3 SARGENTO") || r.includes("3º SARGENTO")) return "3º SGT QBM";
-    if (r.includes("CABO")) return "CB QBM";
-    if (r.includes("SOLDADO")) return "SD QBM";
+    if (r.includes("SUB") && r.includes("TENENTE")) return "ST QPBM";
+    if (r.includes("1 SARGENTO") || r.includes("1º SARGENTO")) return "1º SGT QPBM";
+    if (r.includes("2 SARGENTO") || r.includes("2º SARGENTO")) return "2º SGT QPBM";
+    if (r.includes("3 SARGENTO") || r.includes("3º SARGENTO")) return "3º SGT QPBM";
+    if (r.includes("CABO")) return "CB QPBM";
+    if (r.includes("AL CFP")) return "AL CFP BM";
+    if (r.includes("SOLDADO")) return "SD QPBM";
     return "SD QBM";
   };
 
