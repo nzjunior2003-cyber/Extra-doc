@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Flame, Sun, Moon, FileText, DollarSign, ClipboardList, 
-  Share2, Upload, Wifi, WifiOff, Database, CheckCircle2, 
+  Share2, Upload, Wifi, WifiOff, Database, CheckCircle2,
   User, Search, Plus, X, Star, Trash2, Check, Download,
   GripVertical, Camera, Eraser
 } from 'lucide-react';
@@ -1401,7 +1401,7 @@ const App: React.FC = () => {
                        </div>
 
                        <div className="grid grid-cols-2 gap-2">
-                          <div><label className="label">Nº SISCOB</label><input type="text" className="input" value={state.formData.siscobNumber} onChange={(e) => handleInputChange('siscobNumber', e.target.value)} /></div>
+                          <div><label className="label">Nº PPE</label><input type="text" className="input" value={state.formData.siscobNumber} onChange={(e) => handleInputChange('siscobNumber', e.target.value)} /></div>
                           <div><label className="label">ESTIMATIVA PÚBLICO</label><input type="text" className="input" value={state.formData.eventPublicEstimate} onChange={(e) => handleInputChange('eventPublicEstimate', e.target.value)} /></div>
                        </div>
 

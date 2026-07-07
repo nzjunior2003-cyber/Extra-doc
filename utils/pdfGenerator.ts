@@ -347,7 +347,7 @@ export const generatePDF = (state: AppState) => {
     currentY = drawGridRow(currentY, 7, [{ width: 190, label: "", value: `Nº FALTAS: (${counts.f}) - Nº PERMUTA: (${counts.pa}) - Nº DISPENSA: (${counts.d}) - Nº ATRASO: (${counts.a})` }]);
     currentY = drawGridRow(currentY, 7, [
         { width: 95, label: "MÉDIA ESTIMADA DE PÚBLICO:", value: formData.eventPublicEstimate },
-        { width: 95, label: "Nº SISCOB:", value: formData.siscobNumber }
+        { width: 95, label: "Nº PPE:", value: formData.siscobNumber }
     ]);
     currentY = drawGridRow(currentY, 7, [{ width: 190, label: "ANEXOS:", value: "ESCALA GERAL/CÓPIA DA NOTA/ ORDEM DE SERVIÇO." }]);
     currentY += 2;
