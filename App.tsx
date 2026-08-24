@@ -124,6 +124,10 @@ const App: React.FC = () => {
   const [authSubstitutedSearchTerm, setAuthSubstitutedSearchTerm] = useState('');
   const [showAuthSubstitutedSuggestions, setShowAuthSubstitutedSuggestions] = useState(false);
   const [authSubstitutedSuggestions, setAuthSubstitutedSuggestions] = useState<Soldier[]>([]);
+
+  const [authSignerSearchTerm, setAuthSignerSearchTerm] = useState('');
+  const [showAuthSignerSuggestions, setShowAuthSignerSuggestions] = useState(false);
+  const [authSignerSuggestions, setAuthSignerSuggestions] = useState<Soldier[]>([]);
   
   const [newEffItem, setNewEffItem] = useState<{ soldier: Soldier | null, status: string, ubm: string, serviceType: string }>({ 
       soldier: null, status: 'P', ubm: UBMS[0], serviceType: 'PREVENCAO' 
@@ -171,6 +175,7 @@ const App: React.FC = () => {
         if (parsed.formData?.issuerName) setIssuerSearchTerm(parsed.formData.issuerName);
         if (parsed.formData?.authAuthorizedName) setAuthAuthorizedSearchTerm(parsed.formData.authAuthorizedName);
         if (parsed.formData?.authSubstitutedName) setAuthSubstitutedSearchTerm(parsed.formData.authSubstitutedName);
+        if (parsed.formData?.authSignerName) setAuthSignerSearchTerm(parsed.formData.authSignerName);
       } catch (e) {
         console.error("Erro ao carregar dados salvos", e);
       }
@@ -816,6 +821,25 @@ const App: React.FC = () => {
     handleInputChange('authSubstitutedName', s.nome);
     handleInputChange('authSubstitutedMf', s.matricula);
     if (s.posto) handleInputChange('authSubstitutedRank', s.posto.toUpperCase());
+  };
+
+  const handleAuthSignerSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setAuthSignerSearchTerm(val);
+    handleInputChange('authSignerName', val);
+    if (val.length >= 2) {
+      setAuthSignerSuggestions(filterSoldiers(val));
+      setShowAuthSignerSuggestions(true);
+    } else {
+      setShowAuthSignerSuggestions(false);
+    }
+  };
+
+  const selectAuthSigner = (s: Soldier) => {
+    setAuthSignerSearchTerm(s.nome);
+    setShowAuthSignerSuggestions(false);
+    handleInputChange('authSignerName', s.nome);
+    if (s.posto) handleInputChange('authSignerRank', s.posto.toUpperCase());
   };
 
   const addEffectiveItem = () => {
@@ -2009,9 +2033,28 @@ const App: React.FC = () => {
                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="section-title text-cbmpa-800">4. Assinatura (Quem Autoriza)</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <div>
-                          <label className="label">NOME COMPLETO</label>
-                          <input type="text" className="input" value={state.formData.authSignerName} onChange={(e) => handleInputChange('authSignerName', e.target.value)} />
+                       <div className="relative">
+                          <label className="label">NOME COMPLETO (BUSCA OU DIGITE)</label>
+                          <div className="relative">
+                             <input 
+                               type="text" 
+                               className="input pl-9" 
+                               placeholder="Digite nome ou matrícula..." 
+                               value={authSignerSearchTerm}
+                               onChange={handleAuthSignerSearchChange}
+                             />
+                             <Search className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
+                          </div>
+                          {showAuthSignerSuggestions && (
+                            <ul className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto mt-1">
+                               {authSignerSuggestions.map(s => (
+                                 <li key={s.matricula} onClick={() => selectAuthSigner(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm border-b border-gray-100 dark:border-gray-600 last:border-0">
+                                    <div className="font-bold">{s.posto} {s.nome}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Mat: {s.matricula}</div>
+                                 </li>
+                               ))}
+                            </ul>
+                          )}
                        </div>
                        <div>
                           <label className="label">NOME DE GUERRA</label>
