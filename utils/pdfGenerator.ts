@@ -1,11 +1,19 @@
 import { AppState, DocumentType } from '../types';
 import { MEMO_LEGAL_TEXT, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES, getUbmHeaderLines } from '../constants';
+import { LOGO_CBMPA_BASE64 } from '../assets/logo';
 
 const { jsPDF } = window.jspdf;
 
 // Retorna o Y logo abaixo da última linha do cabeçalho, para o chamador ajustar o layout
 const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false): number => {
   const centerX = isLandscape ? 148.5 : 105;
+
+  try {
+    doc.addImage(LOGO_CBMPA_BASE64, 'PNG', 10, 8, 34, 17);
+  } catch (e) {
+    console.error("Erro ao inserir logotipo no cabeçalho:", e);
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(isLandscape ? 10 : 11);
   doc.setTextColor(0, 0, 0);
