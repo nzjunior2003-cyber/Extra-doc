@@ -116,6 +116,14 @@ const App: React.FC = () => {
   const [effSearchTerm, setEffSearchTerm] = useState('');
   const [showEffSuggestions, setShowEffSuggestions] = useState(false);
   const [effSuggestions, setEffSuggestions] = useState<Soldier[]>([]);
+
+  const [authAuthorizedSearchTerm, setAuthAuthorizedSearchTerm] = useState('');
+  const [showAuthAuthorizedSuggestions, setShowAuthAuthorizedSuggestions] = useState(false);
+  const [authAuthorizedSuggestions, setAuthAuthorizedSuggestions] = useState<Soldier[]>([]);
+
+  const [authSubstitutedSearchTerm, setAuthSubstitutedSearchTerm] = useState('');
+  const [showAuthSubstitutedSuggestions, setShowAuthSubstitutedSuggestions] = useState(false);
+  const [authSubstitutedSuggestions, setAuthSubstitutedSuggestions] = useState<Soldier[]>([]);
   
   const [newEffItem, setNewEffItem] = useState<{ soldier: Soldier | null, status: string, ubm: string, serviceType: string }>({ 
       soldier: null, status: 'P', ubm: UBMS[0], serviceType: 'PREVENCAO' 
@@ -161,6 +169,8 @@ const App: React.FC = () => {
           personnelDb: prev.personnelDb 
         }));
         if (parsed.formData?.issuerName) setIssuerSearchTerm(parsed.formData.issuerName);
+        if (parsed.formData?.authAuthorizedName) setAuthAuthorizedSearchTerm(parsed.formData.authAuthorizedName);
+        if (parsed.formData?.authSubstitutedName) setAuthSubstitutedSearchTerm(parsed.formData.authSubstitutedName);
       } catch (e) {
         console.error("Erro ao carregar dados salvos", e);
       }
@@ -766,6 +776,46 @@ const App: React.FC = () => {
     setEffSearchTerm(s.nome);
     setShowEffSuggestions(false);
     setNewEffItem(prev => ({ ...prev, soldier: s, ubm: s.ubm || UBMS[0] }));
+  };
+
+  const handleAuthAuthorizedSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setAuthAuthorizedSearchTerm(val);
+    handleInputChange('authAuthorizedName', val);
+    if (val.length >= 2) {
+      setAuthAuthorizedSuggestions(filterSoldiers(val));
+      setShowAuthAuthorizedSuggestions(true);
+    } else {
+      setShowAuthAuthorizedSuggestions(false);
+    }
+  };
+
+  const selectAuthAuthorized = (s: Soldier) => {
+    setAuthAuthorizedSearchTerm(s.nome);
+    setShowAuthAuthorizedSuggestions(false);
+    handleInputChange('authAuthorizedName', s.nome);
+    handleInputChange('authAuthorizedMf', s.matricula);
+    if (s.posto) handleInputChange('authAuthorizedRank', s.posto.toUpperCase());
+  };
+
+  const handleAuthSubstitutedSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setAuthSubstitutedSearchTerm(val);
+    handleInputChange('authSubstitutedName', val);
+    if (val.length >= 2) {
+      setAuthSubstitutedSuggestions(filterSoldiers(val));
+      setShowAuthSubstitutedSuggestions(true);
+    } else {
+      setShowAuthSubstitutedSuggestions(false);
+    }
+  };
+
+  const selectAuthSubstituted = (s: Soldier) => {
+    setAuthSubstitutedSearchTerm(s.nome);
+    setShowAuthSubstitutedSuggestions(false);
+    handleInputChange('authSubstitutedName', s.nome);
+    handleInputChange('authSubstitutedMf', s.matricula);
+    if (s.posto) handleInputChange('authSubstitutedRank', s.posto.toUpperCase());
   };
 
   const addEffectiveItem = () => {
@@ -1881,15 +1931,34 @@ const App: React.FC = () => {
                  <div className="bg-blue-50 dark:bg-gray-800/50 rounded-lg p-4 border border-blue-100 dark:border-gray-700">
                     <h3 className="section-title text-cbmpa-800">2. Militar Autorizado</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <div className="md:col-span-1 relative">
+                          <label className="label">BUSCAR MILITAR (NOME OU MATRÍCULA)</label>
+                          <div className="relative">
+                             <input 
+                               type="text" 
+                               className="input pl-9" 
+                               placeholder="Digite nome ou matrícula..." 
+                               value={authAuthorizedSearchTerm}
+                               onChange={handleAuthAuthorizedSearchChange}
+                             />
+                             <Search className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
+                          </div>
+                          {showAuthAuthorizedSuggestions && (
+                            <ul className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto mt-1">
+                               {authAuthorizedSuggestions.map(s => (
+                                 <li key={s.matricula} onClick={() => selectAuthAuthorized(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm border-b border-gray-100 dark:border-gray-600 last:border-0">
+                                    <div className="font-bold">{s.posto} {s.nome}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Mat: {s.matricula}</div>
+                                 </li>
+                               ))}
+                            </ul>
+                          )}
+                       </div>
                        <div>
                           <label className="label">POSTO/GRADUAÇÃO</label>
                           <select className="input" value={state.formData.authAuthorizedRank} onChange={(e) => handleInputChange('authAuthorizedRank', e.target.value)}>
                              {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
-                       </div>
-                       <div>
-                          <label className="label">NOME</label>
-                          <input type="text" className="input" value={state.formData.authAuthorizedName} onChange={(e) => handleInputChange('authAuthorizedName', e.target.value)} />
                        </div>
                        <div>
                           <label className="label">MF (MATRÍCULA)</label>
@@ -1901,15 +1970,34 @@ const App: React.FC = () => {
                  <div className="bg-yellow-50 dark:bg-gray-900/30 rounded-lg p-4 border border-yellow-100 dark:border-gray-700">
                     <h3 className="section-title text-cbmpa-800">3. Militar Substituído</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <div className="md:col-span-1 relative">
+                          <label className="label">BUSCAR MILITAR (NOME OU MATRÍCULA)</label>
+                          <div className="relative">
+                             <input 
+                               type="text" 
+                               className="input pl-9" 
+                               placeholder="Digite nome ou matrícula..." 
+                               value={authSubstitutedSearchTerm}
+                               onChange={handleAuthSubstitutedSearchChange}
+                             />
+                             <Search className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
+                          </div>
+                          {showAuthSubstitutedSuggestions && (
+                            <ul className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto mt-1">
+                               {authSubstitutedSuggestions.map(s => (
+                                 <li key={s.matricula} onClick={() => selectAuthSubstituted(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm border-b border-gray-100 dark:border-gray-600 last:border-0">
+                                    <div className="font-bold">{s.posto} {s.nome}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Mat: {s.matricula}</div>
+                                 </li>
+                               ))}
+                            </ul>
+                          )}
+                       </div>
                        <div>
                           <label className="label">POSTO/GRADUAÇÃO</label>
                           <select className="input" value={state.formData.authSubstitutedRank} onChange={(e) => handleInputChange('authSubstitutedRank', e.target.value)}>
                              {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
-                       </div>
-                       <div>
-                          <label className="label">NOME</label>
-                          <input type="text" className="input" value={state.formData.authSubstitutedName} onChange={(e) => handleInputChange('authSubstitutedName', e.target.value)} />
                        </div>
                        <div>
                           <label className="label">MF (MATRÍCULA)</label>
