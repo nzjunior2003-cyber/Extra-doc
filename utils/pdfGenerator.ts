@@ -1,16 +1,24 @@
 import { AppState, DocumentType } from '../types';
-import { MEMO_LEGAL_TEXT, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES } from '../constants';
+import { MEMO_LEGAL_TEXT, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES, getUbmHeaderLines } from '../constants';
 
 const { jsPDF } = window.jspdf;
 
-const addCbmpaHeader = (doc: any, isLandscape = false) => {
+// Retorna o Y logo abaixo da última linha do cabeçalho, para o chamador ajustar o layout
+const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false): number => {
   const centerX = isLandscape ? 148.5 : 105;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(isLandscape ? 10 : 11);
   doc.setTextColor(0, 0, 0);
   doc.text("CORPO DE BOMBEIROS MILITAR DO PARÁ E", centerX, 15, { align: "center" });
   doc.text("COORDENADORIA ESTADUAL DE DEFESA CIVIL", centerX, 20, { align: "center" });
-  doc.text("COMANDO OPERACIONAL", centerX, 25, { align: "center" });
+
+  const commandLines = getUbmHeaderLines(ubm);
+  let y = 25;
+  commandLines.forEach(line => {
+    doc.text(line, centerX, y, { align: "center" });
+    y += 5;
+  });
+  return y;
 };
 
 const formatDate = (dateStr: string) => {
@@ -87,6 +95,39 @@ const drawSignatureWithBoldHighlight = (doc: any, name: string, warName: string,
   });
 };
 
+// Renderiza um parágrafo com quebra de linha automática, suportando **negrito** inline.
+// Retorna o Y final (logo após a última linha escrita).
+const drawMixedBoldParagraph = (doc: any, text: string, x: number, y: number, maxWidth: number, lineHeight = 5.5, fontSize = 11) => {
+  const rawSegments = text.split(/(\*\*[^*]+\*\*)/g).filter(s => s.length > 0);
+  const words: { text: string, bold: boolean }[] = [];
+  rawSegments.forEach(seg => {
+    const isBold = seg.startsWith('**') && seg.endsWith('**');
+    const clean = isBold ? seg.slice(2, -2) : seg;
+    clean.split(' ').forEach(w => {
+      if (w.length > 0) words.push({ text: w, bold: isBold });
+    });
+  });
+
+  let cursorX = x;
+  let cursorY = y;
+  doc.setFontSize(fontSize);
+  doc.setFont("helvetica", "normal");
+  const spaceWidth = doc.getTextWidth(' ');
+
+  words.forEach(word => {
+    doc.setFont("helvetica", word.bold ? "bold" : "normal");
+    const wWidth = doc.getTextWidth(word.text);
+    if (cursorX + wWidth > x + maxWidth) {
+      cursorX = x;
+      cursorY += lineHeight;
+    }
+    doc.text(word.text, cursorX, cursorY);
+    cursorX += wWidth + spaceWidth;
+  });
+
+  return cursorY + lineHeight;
+};
+
 export const generatePDF = (state: AppState) => {
   const { formData } = state;
   const today = new Date();
@@ -95,10 +136,10 @@ export const generatePDF = (state: AppState) => {
 
   if (state.currentDoc === DocumentType.MEMO) {
     const doc = new jsPDF();
-    addCbmpaHeader(doc);
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm);
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    const startY = 45;
+    const startY = headerEndY + 15;
     const leftMargin = 25;
     const recipientLine = `Ao Srº ${formData.recipient || ''}`;
     doc.text(recipientLine, leftMargin, startY);
@@ -191,19 +232,20 @@ export const generatePDF = (state: AppState) => {
 
       let tableStartY = 15;
       if (isFirstPage) {
-        addCbmpaHeader(doc, true);
+        const headerEndY = addCbmpaHeader(doc, formData.headerUbm, true);
+        const off = headerEndY - 30; // 0 para 1 linha de comando, 5 para 2 linhas (ex: GBS)
         doc.setFillColor(230, 230, 230);
-        doc.rect(10, 30, 277, 12, 'F'); 
+        doc.rect(10, 30 + off, 277, 12, 'F'); 
         doc.setDrawColor(0);
-        doc.rect(10, 30, 277, 12);
+        doc.rect(10, 30 + off, 277, 12);
         doc.setFontSize(9);
         doc.setFont("helvetica", "bold");
-        doc.text("RELAÇÃO DOS BOMBEIROS MILITARES DO SERVIÇO DE COMPLENTAÇÃO DE JORNADA OPERACIONAL LEI Nº 6.830 DE 13 DE FEVEREIRO DE 2006", 148.5, 35, { align: "center", maxWidth: 270 });
+        doc.text("RELAÇÃO DOS BOMBEIROS MILITARES DO SERVIÇO DE COMPLENTAÇÃO DE JORNADA OPERACIONAL LEI Nº 6.830 DE 13 DE FEVEREIRO DE 2006", 148.5, 35 + off, { align: "center", maxWidth: 270 });
         doc.setFillColor(230, 230, 230);
-        doc.rect(10, 42, 277, 8, 'F');
-        doc.rect(10, 42, 277, 8);
-        doc.text(`${formData.operationName || 'OPERAÇÃO'} - NS Nº ${formData.memoNs || '____'}`, 148.5, 47, { align: "center" });
-        tableStartY = 50;
+        doc.rect(10, 42 + off, 277, 8, 'F');
+        doc.rect(10, 42 + off, 277, 8);
+        doc.text(`${formData.operationName || 'OPERAÇÃO'} - NS Nº ${formData.memoNs || '____'}`, 148.5, 47 + off, { align: "center" });
+        tableStartY = 50 + off;
       }
 
       if (isLastChunk) {
@@ -283,7 +325,8 @@ export const generatePDF = (state: AppState) => {
 
   else if (state.currentDoc === DocumentType.REPORT) {
     const doc = new jsPDF();
-    addCbmpaHeader(doc);
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm);
+    const off = headerEndY - 30; // 0 para 1 linha de comando, 5 para 2 linhas (ex: GBS)
     
     const effList = formData.reportEffectiveItems || [];
     const counts = {
@@ -295,14 +338,14 @@ export const generatePDF = (state: AppState) => {
     };
 
     doc.setFillColor(255, 255, 0);
-    doc.rect(10, 32, 190, 10, 'F');
+    doc.rect(10, 32 + off, 190, 10, 'F');
     doc.setDrawColor(0);
-    doc.rect(10, 32, 190, 10);
+    doc.rect(10, 32 + off, 190, 10);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("RELATÓRIO DE PREVENÇÃO – JORNADA OPERACIONAL EXTRAORDINÁRIA", 105, 38.5, { align: "center" });
+    doc.text("RELATÓRIO DE PREVENÇÃO – JORNADA OPERACIONAL EXTRAORDINÁRIA", 105, 38.5 + off, { align: "center" });
 
-    let currentY = 45;
+    let currentY = 45 + off;
     const drawSectionHeader = (title: string, y: number, width = 190, x = 10) => {
       doc.setFillColor(220, 220, 220);
       doc.rect(x, y, width, 6, 'F');
@@ -582,6 +625,47 @@ export const generatePDF = (state: AppState) => {
     drawSignatureWithBoldHighlight(doc, formData.issuerName, formData.issuerWarName, formData.issuerRank, 105, currentY);
     doc.setFont("helvetica", "normal");
     doc.text("CMT DA OPERAÇÃO/EXTRAORDINÁRIA", 105, currentY + 5, { align: "center" });
+
+    window.open(doc.output('bloburl'), '_blank');
+  }
+
+  else if (state.currentDoc === DocumentType.AUTHORIZATION) {
+    const doc = new jsPDF();
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm);
+    const off = headerEndY - 30; // 0 para 1 linha de comando, 5 para 2 linhas (ex: GBS)
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("AUTORIZAÇÃO", 105, 45 + off, { align: "center" });
+
+    const formatFullDate = (dateStr: string) => {
+      const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+      const weekdays = ["DOMINGO", "SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO"];
+      if (!dateStr) return { day: '____', month: '________', year: '____', weekday: '________' };
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      return {
+        day: String(d).padStart(2, '0'),
+        month: months[m - 1],
+        year: String(y),
+        weekday: weekdays[dateObj.getDay()]
+      };
+    };
+    const svcDate = formatFullDate(formData.authServiceDate);
+
+    const bodyText = `Tem autorização desta seção o **${formData.authAuthorizedRank} ${formData.authAuthorizedName}**, **MF:** ${formData.authAuthorizedMf}, para montar serviço extraordinário de ${formData.authServiceName || '________'}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ao **${formData.authSubstitutedRank} ${formData.authSubstitutedName}**, **MF:** ${formData.authSubstitutedMf}, sem prejuízo na escala de serviço.`;
+
+    const bodyEndY = drawMixedBoldParagraph(doc, bodyText, 20, 65 + off, 170, 5.5, 11);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Belém-PA, ${dateString}.`, 190, bodyEndY + 20, { align: "right" });
+
+    const sigY = bodyEndY + 60;
+    drawSignatureWithBoldHighlight(doc, formData.authSignerName, formData.authSignerWarName, formData.authSignerRank, 105, sigY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(formData.authSignerRole || '', 105, sigY + 5, { align: "center" });
 
     window.open(doc.output('bloburl'), '_blank');
   }

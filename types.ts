@@ -2,6 +2,7 @@ export enum DocumentType {
   MEMO = 'MEMORANDO',
   REPORT = 'RELATÓRIO',
   COST_SHEET = 'PLANILHA_CUSTOS',
+  AUTHORIZATION = 'AUTORIZACAO',
 }
 
 export interface DraftMetadata {
@@ -128,6 +129,23 @@ export interface AppState {
     // NOVOS CAMPOS ADICIONADOS AQUI
     reportFinalConsiderations: string;
     reportPhotos: string[]; 
+
+    // Cabeçalho dinâmico por UBM (usado em todos os documentos)
+    headerUbm: string;
+
+    // Authorization Specific
+    authAuthorizedRank: string;
+    authAuthorizedName: string;
+    authAuthorizedMf: string;
+    authServiceName: string;
+    authServiceDate: string;
+    authSubstitutedRank: string;
+    authSubstitutedName: string;
+    authSubstitutedMf: string;
+    authSignerName: string;
+    authSignerWarName: string;
+    authSignerRank: string;
+    authSignerRole: string;
   };
 }
 

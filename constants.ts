@@ -21,7 +21,8 @@ export const RANKS = [
   "CEL QOCBM",
   "CEL QOSBM",
   "AL CFP",   // Added to support students in CSV
-  "AL OF BM"  // Added to support cadets in CSV
+  "AL OF BM", // Added to support officer students in CSV
+  "CAD BM"    // Added to support cadets in CSV
 ];
 
 export const UBMS = [
@@ -38,8 +39,44 @@ export const UBMS = [
   "CSMV/MOP",
   "CAT",
   "COP",
-  "QCG"
+  "QCG",
+  "AJG"
 ];
+
+// Mapeamento de código de UBM para o nome completo do comando (usado no cabeçalho dos PDFs)
+const UBM_UNIT_NAMES: Record<string, string> = {
+  "GBM": "GRUPAMENTO BOMBEIRO MILITAR",
+  "ABM": "ACADEMIA BOMBEIRO MILITAR",
+  "CFAE": "CENTRO DE FORMAÇÃO APERFEIÇOAMENTO E ESPECIALIZAÇÃO",
+  "GPA": "GRUPAMENTO DE PROTEÇÃO AMBIENTAL",
+  "CAT": "CENTRO DE ATIVIDADES TÉCNICAS",
+  "COP": "COMANDO OPERACIONAL",
+  "GMAF": "GRUPAMENTO MARÍTIMO FLUVIAL",
+  "CSMV/MOP": "CENTRO DE SUPRIMENTO, MANUTENÇÃO VEICULAR E MATERIAIS OPERACIONAIS",
+  "QCG": "QUARTEL DO COMANDO GERAL",
+  "AJG": "AJUDÂNCIA GERAL",
+  "GSE": "GRUPAMENTO DE SOCORRO E EMERGÊNCIA"
+};
+
+// Unidades cuja cadeia de comando no cabeçalho tem uma linha extra (comando intermediário)
+const UBM_HEADER_OVERRIDES: Record<string, string[]> = {
+  "GBS": ["COMANDO DE MISSÕES ESPECIAIS", "GRUPAMENTO DE BUSCA E SALVAMENTO"]
+};
+
+// Retorna as linhas do cabeçalho (abaixo de "CORPO DE BOMBEIROS...") para uma dada UBM
+export const getUbmHeaderLines = (ubm: string): string[] => {
+  if (!ubm) return ["COMANDO OPERACIONAL"];
+  const parts = ubm.trim().split(' ');
+  const hasOrdinal = parts.length === 2 && /^\d+º$/.test(parts[0]);
+  const code = hasOrdinal ? parts[1] : ubm;
+  const ordinal = hasOrdinal ? parts[0] : '';
+
+  if (UBM_HEADER_OVERRIDES[code]) return UBM_HEADER_OVERRIDES[code];
+
+  const name = UBM_UNIT_NAMES[code];
+  if (!name) return ["COMANDO OPERACIONAL"];
+  return [ordinal ? `${ordinal} ${name}` : name];
+};
 
 // Value per day/service from the screenshot (R$ 217,16)
 export const UNIT_VALUE_DEFAULT = 217.16;

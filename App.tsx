@@ -3,7 +3,7 @@ import {
   Flame, Sun, Moon, FileText, DollarSign, ClipboardList, 
   Share2, Upload, Wifi, WifiOff, Database, CheckCircle2,
   User, Search, Plus, X, Star, Trash2, Check, Download,
-  GripVertical, Camera, Eraser
+  GripVertical, Camera, Eraser, ShieldCheck
 } from 'lucide-react';
 import { AppState, DocumentType, Soldier, CostSheetItem, ReportEffectiveItem, ReportServiceItem } from './types';
 import { RANKS, UBMS, UNIT_VALUE_DEFAULT, EXTERNAL_DB_URL, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES } from './constants';
@@ -68,7 +68,22 @@ const DEFAULT_FORM_DATA = {
   reportDistribution: 'CONFORME NECESSIDADE',
   reportSuggestions: 'NADA A DECLARAR',
   reportPhotos: ['', ''], 
-  reportFinalConsiderations: '' 
+  reportFinalConsiderations: '',
+
+  headerUbm: 'COP',
+
+  authAuthorizedRank: RANKS[0],
+  authAuthorizedName: '',
+  authAuthorizedMf: '',
+  authServiceName: '',
+  authServiceDate: new Date().toISOString().split('T')[0],
+  authSubstitutedRank: RANKS[0],
+  authSubstitutedName: '',
+  authSubstitutedMf: '',
+  authSignerName: '',
+  authSignerWarName: '',
+  authSignerRank: RANKS[0],
+  authSignerRole: ''
 };
 
 const App: React.FC = () => {
@@ -392,9 +407,9 @@ const App: React.FC = () => {
       return "2º TEN QOBM";
     }
     if (r.includes("ALUNO CURSO") || r.includes("FORMACAO DE SOLDADO")) return "AL CFP BM";
-    if (r.includes("ALUNO OFICIAL")) return "AL OF BM";
+    if (r.includes("ALUNO") && r.includes("OFICIAL")) return "CAD BM";
     if (r.includes("ASPIRANTE")) return "ASP OF BM";
-    if (r.includes("CADETE")) return "AL OF BM";
+    if (r.includes("CADETE")) return "CAD BM";
     if (r.includes("SUB") && r.includes("TENENTE")) return "ST QPBM";
     if (r.includes("1 SARGENTO") || r.includes("1º SARGENTO")) return "1º SGT QPBM";
     if (r.includes("2 SARGENTO") || r.includes("2º SARGENTO")) return "2º SGT QPBM";
@@ -921,6 +936,13 @@ const App: React.FC = () => {
             <ClipboardList size={20} />
             <span>Relatório</span>
           </button>
+          <button 
+            onClick={() => setState(prev => ({ ...prev, currentDoc: DocumentType.AUTHORIZATION }))}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${state.currentDoc === DocumentType.AUTHORIZATION ? 'bg-yellow-500 text-cbmpa-900 font-bold shadow-md' : 'hover:bg-cbmpa-800 text-white'}`}
+          >
+            <ShieldCheck size={20} />
+            <span>Autorização</span>
+          </button>
 
           {/* BACKUP SECTION */}
           <div className="pt-6 mt-6 border-t border-cbmpa-800">
@@ -1015,9 +1037,11 @@ const App: React.FC = () => {
                      {state.currentDoc === DocumentType.MEMO && <FileText size={24}/>}
                      {state.currentDoc === DocumentType.COST_SHEET && <DollarSign size={24}/>}
                      {state.currentDoc === DocumentType.REPORT && <ClipboardList size={24}/>}
+                     {state.currentDoc === DocumentType.AUTHORIZATION && <ShieldCheck size={24}/>}
                      {state.currentDoc === DocumentType.MEMO && "MEMORANDO"}
                      {state.currentDoc === DocumentType.COST_SHEET && "PLANILHA DE CUSTOS"}
                      {state.currentDoc === DocumentType.REPORT && "RELATÓRIO DE PREVENÇÃO"}
+                     {state.currentDoc === DocumentType.AUTHORIZATION && "AUTORIZAÇÃO DE SERVIÇO"}
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">Preencha os dados conforme modelo padrão</p>
                 </div>
@@ -1359,6 +1383,12 @@ const App: React.FC = () => {
                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="section-title text-cbmpa-800">1. Dados Iniciais (Sincronizado com Planilha)</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div>
+                          <label className="label">UNIDADE (CABEÇALHO DO DOCUMENTO)</label>
+                          <select className="input" value={state.formData.headerUbm} onChange={(e) => handleInputChange('headerUbm', e.target.value)}>
+                             {UBMS.map(u => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                       </div>
                        <div>
                           <label className="label">NOME DO EVENTO</label>
                           <input type="text" className="input" value={state.formData.eventName} onChange={(e) => handleInputChange('eventName', e.target.value)} />
@@ -1818,6 +1848,97 @@ const App: React.FC = () => {
                           value={state.formData.reportFinalConsiderations || ''} 
                           onChange={(e) => handleInputChange('reportFinalConsiderations', e.target.value)} 
                        />
+                    </div>
+                 </div>
+
+              </div>
+            )}
+
+            {/* --- AUTHORIZATION FORM --- */}
+            {state.currentDoc === DocumentType.AUTHORIZATION && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="section-title text-cbmpa-800">1. Unidade e Serviço</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div>
+                          <label className="label">UNIDADE (CABEÇALHO DO DOCUMENTO)</label>
+                          <select className="input" value={state.formData.headerUbm} onChange={(e) => handleInputChange('headerUbm', e.target.value)}>
+                             {UBMS.map(u => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                       </div>
+                       <div>
+                          <label className="label">SERVIÇO EXTRAORDINÁRIO (EX: REFORÇO DO GBS)</label>
+                          <input type="text" className="input" value={state.formData.authServiceName} onChange={(e) => handleInputChange('authServiceName', e.target.value)} />
+                       </div>
+                       <div>
+                          <label className="label">DATA DO SERVIÇO</label>
+                          <input type="date" className="input" value={state.formData.authServiceDate} onChange={(e) => handleInputChange('authServiceDate', e.target.value)} />
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="bg-blue-50 dark:bg-gray-800/50 rounded-lg p-4 border border-blue-100 dark:border-gray-700">
+                    <h3 className="section-title text-cbmpa-800">2. Militar Autorizado</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <div>
+                          <label className="label">POSTO/GRADUAÇÃO</label>
+                          <select className="input" value={state.formData.authAuthorizedRank} onChange={(e) => handleInputChange('authAuthorizedRank', e.target.value)}>
+                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                       </div>
+                       <div>
+                          <label className="label">NOME</label>
+                          <input type="text" className="input" value={state.formData.authAuthorizedName} onChange={(e) => handleInputChange('authAuthorizedName', e.target.value)} />
+                       </div>
+                       <div>
+                          <label className="label">MF (MATRÍCULA)</label>
+                          <input type="text" className="input" value={state.formData.authAuthorizedMf} onChange={(e) => handleInputChange('authAuthorizedMf', e.target.value)} />
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="bg-yellow-50 dark:bg-gray-900/30 rounded-lg p-4 border border-yellow-100 dark:border-gray-700">
+                    <h3 className="section-title text-cbmpa-800">3. Militar Substituído</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <div>
+                          <label className="label">POSTO/GRADUAÇÃO</label>
+                          <select className="input" value={state.formData.authSubstitutedRank} onChange={(e) => handleInputChange('authSubstitutedRank', e.target.value)}>
+                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                       </div>
+                       <div>
+                          <label className="label">NOME</label>
+                          <input type="text" className="input" value={state.formData.authSubstitutedName} onChange={(e) => handleInputChange('authSubstitutedName', e.target.value)} />
+                       </div>
+                       <div>
+                          <label className="label">MF (MATRÍCULA)</label>
+                          <input type="text" className="input" value={state.formData.authSubstitutedMf} onChange={(e) => handleInputChange('authSubstitutedMf', e.target.value)} />
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="section-title text-cbmpa-800">4. Assinatura (Quem Autoriza)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div>
+                          <label className="label">NOME COMPLETO</label>
+                          <input type="text" className="input" value={state.formData.authSignerName} onChange={(e) => handleInputChange('authSignerName', e.target.value)} />
+                       </div>
+                       <div>
+                          <label className="label">NOME DE GUERRA</label>
+                          <input type="text" className="input" placeholder="Ex: SILVA" value={state.formData.authSignerWarName} onChange={(e) => handleInputChange('authSignerWarName', e.target.value)} />
+                       </div>
+                       <div>
+                          <label className="label">POSTO/GRADUAÇÃO</label>
+                          <select className="input" value={state.formData.authSignerRank} onChange={(e) => handleInputChange('authSignerRank', e.target.value)}>
+                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                       </div>
+                       <div>
+                          <label className="label">FUNÇÃO (EX: AUXILIAR DA SEÇÃO DE PESSOAL DO GBS)</label>
+                          <input type="text" className="input" value={state.formData.authSignerRole} onChange={(e) => handleInputChange('authSignerRole', e.target.value)} />
+                       </div>
                     </div>
                  </div>
 
