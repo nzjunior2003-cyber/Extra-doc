@@ -1994,8 +1994,10 @@ const App: React.FC = () => {
                           </select>
                        </div>
                        <div>
-                          <label className="label">POSTO/GRADUAÇÃO (AUTOMÁTICO)</label>
-                          <input type="text" className="input bg-gray-100 dark:bg-gray-900 cursor-not-allowed" value={state.formData.authAuthorizedRank} disabled readOnly />
+                          <label className="label">POSTO/GRADUAÇÃO</label>
+                          <select className="input" value={state.formData.authAuthorizedRank} onChange={(e) => handleInputChange('authAuthorizedRank', e.target.value)}>
+                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
                        </div>
                        <div>
                           <label className="label">MF (MATRÍCULA)</label>
@@ -2042,8 +2044,10 @@ const App: React.FC = () => {
                           </select>
                        </div>
                        <div>
-                          <label className="label">POSTO/GRADUAÇÃO (AUTOMÁTICO)</label>
-                          <input type="text" className="input bg-gray-100 dark:bg-gray-900 cursor-not-allowed" value={state.formData.authSubstitutedRank} disabled readOnly />
+                          <label className="label">POSTO/GRADUAÇÃO</label>
+                          <select className="input" value={state.formData.authSubstitutedRank} onChange={(e) => handleInputChange('authSubstitutedRank', e.target.value)}>
+                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
                        </div>
                        <div>
                           <label className="label">MF (MATRÍCULA)</label>
