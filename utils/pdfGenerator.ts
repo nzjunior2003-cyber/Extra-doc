@@ -725,11 +725,30 @@ export const generatePDF = (state: AppState) => {
 
     const bodyEndY = drawJustifiedParagraph(doc, bodySegments, 20, 65 + off, 170, 5.5, 11);
 
+    // Retângulos para assinatura do militar autorizado e do substituído
+    const sigBoxY = bodyEndY + 15;
+    const sigBoxHeight = 18;
+    const sigBoxWidth = 75;
+    const sigBoxGap = 20;
+    const leftBoxX = 20;
+    const rightBoxX = leftBoxX + sigBoxWidth + sigBoxGap;
+
+    doc.setDrawColor(0);
+    doc.rect(leftBoxX, sigBoxY, sigBoxWidth, sigBoxHeight);
+    doc.rect(rightBoxX, sigBoxY, sigBoxWidth, sigBoxHeight);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Autorizado", leftBoxX + sigBoxWidth / 2, sigBoxY + sigBoxHeight + 5, { align: "center" });
+    doc.text("Substituído", rightBoxX + sigBoxWidth / 2, sigBoxY + sigBoxHeight + 5, { align: "center" });
+
+    const afterBoxesY = sigBoxY + sigBoxHeight + 5;
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
-    doc.text(`Belém-PA, ${dateString}.`, 190, bodyEndY + 20, { align: "right" });
+    doc.text(`Belém-PA, ${dateString}.`, 190, afterBoxesY + 15, { align: "right" });
 
-    const sigY = bodyEndY + 60;
+    const sigY = afterBoxesY + 55;
     drawSignatureWithBoldHighlight(doc, formData.authSignerName, formData.authSignerWarName, formData.authSignerRank, 105, sigY);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
