@@ -5,11 +5,12 @@ import { LOGO_CBMPA_BASE64 } from '../assets/logo';
 const { jsPDF } = window.jspdf;
 
 // Retorna o Y logo abaixo da última linha do cabeçalho, para o chamador ajustar o layout
-const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false): number => {
+// marginX: alinha o logo com a margem esquerda do corpo de texto de cada documento (varia por tipo)
+const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false, marginX = 10): number => {
   const centerX = isLandscape ? 148.5 : 105;
 
   try {
-    doc.addImage(LOGO_CBMPA_BASE64, 'PNG', 10, 11.5, 30, 15.1);
+    doc.addImage(LOGO_CBMPA_BASE64, 'PNG', marginX, 11.5, 30, 15.1);
   } catch (e) {
     console.error("Erro ao inserir logotipo no cabeçalho:", e);
   }
@@ -194,7 +195,7 @@ export const generatePDF = (state: AppState) => {
 
   if (state.currentDoc === DocumentType.MEMO) {
     const doc = new jsPDF();
-    const headerEndY = addCbmpaHeader(doc, formData.headerUbm);
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm, false, 25);
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     const startY = headerEndY + 15;
@@ -689,7 +690,7 @@ export const generatePDF = (state: AppState) => {
 
   else if (state.currentDoc === DocumentType.AUTHORIZATION) {
     const doc = new jsPDF();
-    const headerEndY = addCbmpaHeader(doc, formData.headerUbm);
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm, false, 20);
     const off = headerEndY - 30; // 0 para 1 linha de comando, 5 para 2 linhas (ex: GBS)
 
     doc.setFont("helvetica", "bold");
