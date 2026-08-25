@@ -141,6 +141,9 @@ export interface AppState {
     authAuthorizedGender: 'M' | 'F';
     authServiceName: string;
     authServiceDate: string;
+    authIsPartial: boolean;
+    authStartTime: string;
+    authEndTime: string;
     authSubstitutedRank: string;
     authSubstitutedName: string;
     authSubstitutedWarName: string;

@@ -712,6 +712,23 @@ export const generatePDF = (state: AppState) => {
     };
     const svcDate = formatFullDate(formData.authServiceDate);
 
+    const buildTimePhrase = (isPartial: boolean, startTime: string, endTime: string, serviceDateStr: string): string => {
+      if (!isPartial || !startTime || !endTime) return '';
+      let phrase = ` das ${startTime} horas às ${endTime} horas`;
+
+      // Se o horário de término for menor ou igual ao de início, o serviço cruza a meia-noite
+      if (endTime <= startTime && serviceDateStr) {
+        const [y, m, d] = serviceDateStr.split('-').map(Number);
+        const nextDay = new Date(y, m - 1, d + 1);
+        const dd = String(nextDay.getDate()).padStart(2, '0');
+        const mm = String(nextDay.getMonth() + 1).padStart(2, '0');
+        const yyyy = nextDay.getFullYear();
+        phrase += ` do dia ${dd}/${mm}/${yyyy}`;
+      }
+      return phrase;
+    };
+    const timePhrase = buildTimePhrase(formData.authIsPartial, formData.authStartTime, formData.authEndTime, formData.authServiceDate);
+
     const authorizedArticle = formData.authAuthorizedGender === 'F' ? 'a' : 'o';
     const substitutedPreposition = formData.authSubstitutedGender === 'F' ? 'à' : 'ao';
     const serviceText = (formData.authServiceName || '________').trim();
@@ -719,7 +736,7 @@ export const generatePDF = (state: AppState) => {
     const bodySegments: { text: string, bold: boolean }[] = [
       { text: `Tem autorização deste oficial ${authorizedArticle}`, bold: false },
       ...buildMilitarySegments(formData.authAuthorizedRank, formData.authAuthorizedName, formData.authAuthorizedWarName, formData.authAuthorizedMf),
-      { text: `para montar serviço de ${serviceText}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ${substitutedPreposition}`, bold: false },
+      { text: `para montar serviço de ${serviceText}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} )${timePhrase}, em substituição ${substitutedPreposition}`, bold: false },
       ...buildMilitarySegments(formData.authSubstitutedRank, formData.authSubstitutedName, formData.authSubstitutedWarName, formData.authSubstitutedMf),
       { text: 'sem prejuízo na escala de serviço.', bold: false },
     ];

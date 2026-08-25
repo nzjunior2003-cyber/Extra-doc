@@ -79,6 +79,9 @@ const DEFAULT_FORM_DATA = {
   authAuthorizedGender: 'M',
   authServiceName: '',
   authServiceDate: new Date().toISOString().split('T')[0],
+  authIsPartial: false,
+  authStartTime: '',
+  authEndTime: '',
   authSubstitutedRank: RANKS[0],
   authSubstitutedName: '',
   authSubstitutedWarName: '',
@@ -1953,6 +1956,37 @@ const App: React.FC = () => {
                           <label className="label">DATA DO SERVIÇO</label>
                           <input type="date" className="input" value={state.formData.authServiceDate} onChange={(e) => handleInputChange('authServiceDate', e.target.value)} />
                        </div>
+                       <div>
+                          <label className="label">TIPO DE SERVIÇO</label>
+                          <div className="flex gap-2">
+                             <button
+                               type="button"
+                               onClick={() => handleInputChange('authIsPartial', false)}
+                               className={`flex-1 h-[42px] rounded font-bold text-sm transition-all ${!state.formData.authIsPartial ? 'bg-cbmpa-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
+                             >
+                                Integral (24h)
+                             </button>
+                             <button
+                               type="button"
+                               onClick={() => handleInputChange('authIsPartial', true)}
+                               className={`flex-1 h-[42px] rounded font-bold text-sm transition-all ${state.formData.authIsPartial ? 'bg-cbmpa-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
+                             >
+                                Parcial
+                             </button>
+                          </div>
+                       </div>
+                       {state.formData.authIsPartial && (
+                         <>
+                           <div>
+                              <label className="label">HORÁRIO INÍCIO</label>
+                              <input type="time" className="input" value={state.formData.authStartTime} onChange={(e) => handleInputChange('authStartTime', e.target.value)} />
+                           </div>
+                           <div>
+                              <label className="label">HORÁRIO TÉRMINO</label>
+                              <input type="time" className="input" value={state.formData.authEndTime} onChange={(e) => handleInputChange('authEndTime', e.target.value)} />
+                           </div>
+                         </>
+                       )}
                     </div>
                  </div>
 
