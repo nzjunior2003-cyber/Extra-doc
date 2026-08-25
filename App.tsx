@@ -22,8 +22,10 @@ const DEFAULT_FORM_DATA = {
   issuerCpf: '',
   issuerPhone: '',
   
-  recipient: '',
-  recipientCargo: '',
+  recipientName: '',
+  recipientWarName: '',
+  recipientRank: RANKS[0],
+  recipientRole: 'Comandante Operacional do CBMPA',
   memoSubject: 'Solicitação de Pagamento de Jornada Op. Extraordinária',
   
   memoNsNum: '',
@@ -71,6 +73,7 @@ const DEFAULT_FORM_DATA = {
   reportFinalConsiderations: '',
 
   headerUbm: 'COP',
+  headerCrb: '',
 
   authAuthorizedRank: RANKS[0],
   authAuthorizedName: '',
@@ -180,6 +183,7 @@ const App: React.FC = () => {
           personnelDb: prev.personnelDb 
         }));
         if (parsed.formData?.issuerName) setIssuerSearchTerm(parsed.formData.issuerName);
+        if (parsed.formData?.recipientName) setRecipientSearchTerm(parsed.formData.recipientName);
         if (parsed.formData?.authAuthorizedName) setAuthAuthorizedSearchTerm(parsed.formData.authAuthorizedName);
         if (parsed.formData?.authSubstitutedName) setAuthSubstitutedSearchTerm(parsed.formData.authSubstitutedName);
         if (parsed.formData?.authSignerName) setAuthSignerSearchTerm(parsed.formData.authSignerName);
@@ -614,7 +618,7 @@ const App: React.FC = () => {
   const handleRecipientSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setRecipientSearchTerm(val);
-    handleInputChange('recipient', val);
+    handleInputChange('recipientName', val);
     if (val.length >= 2) {
       setRecipientSuggestions(filterSoldiers(val));
       setShowRecipientSuggestions(true);
@@ -624,11 +628,10 @@ const App: React.FC = () => {
   };
 
   const selectRecipient = (s: Soldier) => {
-    const memoRank = s.posto ? s.posto.toUpperCase() : '';
-    const formattedRecipient = `${s.nome} - ${memoRank}`;
-    setRecipientSearchTerm(formattedRecipient);
+    setRecipientSearchTerm(s.nome);
     setShowRecipientSuggestions(false);
-    handleInputChange('recipient', formattedRecipient);
+    handleInputChange('recipientName', s.nome);
+    if (s.posto) handleInputChange('recipientRank', s.posto.toUpperCase());
   };
 
   const handleCostSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1139,6 +1142,24 @@ const App: React.FC = () => {
             {/* --- MEMORANDUM FORM --- */}
             {state.currentDoc === DocumentType.MEMO && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                         <label className="label">UNIDADE (CABEÇALHO DO DOCUMENTO)</label>
+                         <select className="input" value={state.formData.headerUbm} onChange={(e) => handleInputChange('headerUbm', e.target.value)}>
+                            {UBMS.map(u => <option key={u} value={u}>{u}</option>)}
+                         </select>
+                      </div>
+                      <div>
+                         <label className="label">COMANDO REGIONAL (CRB)</label>
+                         <select className="input" value={state.formData.headerCrb} onChange={(e) => handleInputChange('headerCrb', e.target.value)}>
+                            <option value="">Nenhum</option>
+                            {['I', 'II', 'III', 'IV', 'V', 'VI'].map(crb => <option key={crb} value={crb}>CRB {crb}</option>)}
+                         </select>
+                      </div>
+                   </div>
+                </div>
+
                 <div className="bg-blue-50 dark:bg-gray-800/50 rounded-lg p-6 border border-blue-100 dark:border-gray-700">
                    <h3 className="text-sm font-bold text-cbmpa-900 dark:text-white mb-4 flex items-center gap-2">
                       <User size={16} /> NOME DO COMANDANTE DA PREVENÇÃO
@@ -1188,22 +1209,42 @@ const App: React.FC = () => {
                    </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-0">
-                   <div className="relative">
-                     <label className="label">NOME DO DESTINATÁRIO (BUSCA OU DIGITE)</label>
-                     <div className="relative">
-                        <input type="text" className="input pl-9" placeholder="Ex: Cel Fulano de Tal" value={recipientSearchTerm} onChange={handleRecipientSearchChange} />
-                        <Search className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
-                     </div>
-                     {showRecipientSuggestions && (
-                       <ul className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto mt-1">
-                         {recipientSuggestions.map(s => (
-                           <li key={s.matricula} onClick={() => selectRecipient(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm">
-                             {s.posto} {s.nome}
-                           </li>
-                         ))}
-                       </ul>
-                     )}
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                   <h3 className="text-sm font-bold text-cbmpa-900 dark:text-white mb-4 flex items-center gap-2">
+                      <User size={16} /> DESTINATÁRIO
+                   </h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative">
+                        <label className="label">NOME COMPLETO (BUSCA OU DIGITE)</label>
+                        <div className="relative">
+                           <input type="text" className="input pl-9" placeholder="Ex: Fulano de Tal" value={recipientSearchTerm} onChange={handleRecipientSearchChange} />
+                           <Search className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
+                        </div>
+                        {showRecipientSuggestions && (
+                          <ul className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto mt-1">
+                            {recipientSuggestions.map(s => (
+                              <li key={s.matricula} onClick={() => selectRecipient(s)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm border-b border-gray-100 dark:border-gray-600 last:border-0">
+                                <div className="font-bold">{s.posto} {s.nome}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">Mat: {s.matricula}</div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div>
+                         <label className="label">NOME DE GUERRA</label>
+                         <input type="text" className="input" placeholder="Ex: SILVA" value={state.formData.recipientWarName} onChange={(e) => handleInputChange('recipientWarName', e.target.value)} />
+                      </div>
+                      <div>
+                         <label className="label">POSTO/GRADUAÇÃO</label>
+                         <select className="input" value={state.formData.recipientRank} onChange={(e) => handleInputChange('recipientRank', e.target.value)}>
+                            {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                         </select>
+                      </div>
+                      <div>
+                         <label className="label">FUNÇÃO</label>
+                         <input type="text" className="input" placeholder="Ex: Comandante Operacional do CBMPA" value={state.formData.recipientRole} onChange={(e) => handleInputChange('recipientRole', e.target.value)} />
+                      </div>
                    </div>
                 </div>
 
@@ -1468,6 +1509,13 @@ const App: React.FC = () => {
                           <label className="label">UNIDADE (CABEÇALHO DO DOCUMENTO)</label>
                           <select className="input" value={state.formData.headerUbm} onChange={(e) => handleInputChange('headerUbm', e.target.value)}>
                              {UBMS.map(u => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                       </div>
+                       <div>
+                          <label className="label">COMANDO REGIONAL (CRB)</label>
+                          <select className="input" value={state.formData.headerCrb} onChange={(e) => handleInputChange('headerCrb', e.target.value)}>
+                             <option value="">Nenhum</option>
+                             {['I', 'II', 'III', 'IV', 'V', 'VI'].map(crb => <option key={crb} value={crb}>CRB {crb}</option>)}
                           </select>
                        </div>
                        <div>
@@ -1946,6 +1994,13 @@ const App: React.FC = () => {
                           <label className="label">UNIDADE (CABEÇALHO DO DOCUMENTO)</label>
                           <select className="input" value={state.formData.headerUbm} onChange={(e) => handleInputChange('headerUbm', e.target.value)}>
                              {UBMS.map(u => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                       </div>
+                       <div>
+                          <label className="label">COMANDO REGIONAL (CRB)</label>
+                          <select className="input" value={state.formData.headerCrb} onChange={(e) => handleInputChange('headerCrb', e.target.value)}>
+                             <option value="">Nenhum</option>
+                             {['I', 'II', 'III', 'IV', 'V', 'VI'].map(crb => <option key={crb} value={crb}>CRB {crb}</option>)}
                           </select>
                        </div>
                        <div>

@@ -72,8 +72,10 @@ export interface AppState {
     issuerPhone: string;
     
     // Memo Specific
-    recipient: string;
-    recipientCargo: string;
+    recipientName: string;
+    recipientWarName: string;
+    recipientRank: string;
+    recipientRole: string;
     memoSubject: string;
     
     // Memo Structured Inputs
@@ -132,6 +134,7 @@ export interface AppState {
 
     // Cabeçalho dinâmico por UBM (usado em todos os documentos)
     headerUbm: string;
+    headerCrb: string;
 
     // Authorization Specific
     authAuthorizedRank: string;

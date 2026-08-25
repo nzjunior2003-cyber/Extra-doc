@@ -6,7 +6,8 @@ const { jsPDF } = window.jspdf;
 
 // Retorna o Y logo abaixo da última linha do cabeçalho, para o chamador ajustar o layout
 // marginX: alinha o logo com a margem esquerda do corpo de texto de cada documento (varia por tipo)
-const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false, marginX = 10): number => {
+// crb: numeral do Comando Regional de Bombeiros (ex: 'I'..'VI'); vazio = não exibe a linha
+const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false, marginX = 10, crb = ''): number => {
   const centerX = isLandscape ? 148.5 : 105;
 
   try {
@@ -21,8 +22,13 @@ const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false, marginX = 10
   doc.text("CORPO DE BOMBEIROS MILITAR DO PARÁ E", centerX, 15, { align: "center" });
   doc.text("COORDENADORIA ESTADUAL DE DEFESA CIVIL", centerX, 20, { align: "center" });
 
-  const commandLines = getUbmHeaderLines(ubm);
   let y = 25;
+  if (crb) {
+    doc.text(`COMANDO REGIONAL DE BOMBEIROS - CRB ${crb}`, centerX, y, { align: "center" });
+    y += 5;
+  }
+
+  const commandLines = getUbmHeaderLines(ubm);
   commandLines.forEach(line => {
     doc.text(line, centerX, y, { align: "center" });
     y += 5;
@@ -118,7 +124,9 @@ const drawJustifiedParagraph = (doc: any, segments: { text: string, bold: boolea
   });
 
   doc.setFont("helvetica", "normal");
-  const spaceWidth = doc.getTextWidth(' ');
+  // Fator de 1.3 aplicado para garantir espaçamento visualmente legível entre palavras
+  // (a largura de espaço "crua" do jsPDF é estreita demais e some visualmente na transição normal->negrito)
+  const spaceWidth = doc.getTextWidth(' ') * 1.3;
 
   // 1ª passada: distribui as palavras em linhas respeitando maxWidth
   const lines: { text: string, bold: boolean }[][] = [];
@@ -187,6 +195,22 @@ const buildMilitarySegments = (rank: string, fullName: string, warName: string, 
   return segs;
 };
 
+// Monta segmentos de posto + nome (com nome de guerra em negrito) sem MF, para linhas de saudação/endereçamento
+const buildNameOnlySegments = (rank: string, fullName: string, warName: string): { text: string, bold: boolean }[] => {
+  const segs: { text: string, bold: boolean }[] = [];
+  if (rank) segs.push({ text: rank.toUpperCase(), bold: false });
+
+  const warTokens = (warName || '').trim().toUpperCase().replace(/\./g, '').split(/\s+/).filter(Boolean);
+  const nameWords = (fullName || '').trim().toUpperCase().split(/\s+/).filter(Boolean);
+  nameWords.forEach(word => {
+    const clean = word.replace(/[,.]/g, '');
+    const isBold = warTokens.length > 0 && warTokens.includes(clean);
+    segs.push({ text: word, bold: isBold });
+  });
+
+  return segs;
+};
+
 export const generatePDF = (state: AppState) => {
   const { formData } = state;
   const today = new Date();
@@ -195,29 +219,36 @@ export const generatePDF = (state: AppState) => {
 
   if (state.currentDoc === DocumentType.MEMO) {
     const doc = new jsPDF();
-    const headerEndY = addCbmpaHeader(doc, formData.headerUbm, false, 25);
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm, false, 25, formData.headerCrb);
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     const startY = headerEndY + 15;
     const leftMargin = 25;
-    const recipientLine = `Ao Srº ${formData.recipient || ''}`;
-    doc.text(recipientLine, leftMargin, startY);
-    doc.text("Comandante Operacional do CBMPA", leftMargin, startY + 5);
-    doc.text("Assunto: Solicitação de Pagamento de Jornada Op. Extraordinária", leftMargin, startY + 15);
-    doc.text("Anexo:", leftMargin, startY + 25);
-    doc.text("    Relatório de prevenção", leftMargin, startY + 30);
-    doc.text("    Planilha de pagamento", leftMargin, startY + 35);
-    doc.text("    Escala de serviço", leftMargin, startY + 40);
-    doc.text(`    NS ${formData.memoNs || '_____'} – SEOP/COP`, leftMargin, startY + 45);
-    doc.text(`    BG de publicação Nº ${formData.memoBg || '_____'}`, leftMargin, startY + 50);
-    doc.text("Senhor Comandante,", leftMargin, startY + 70);
+
+    const recipientSegments: { text: string, bold: boolean }[] = [
+      { text: 'Ao Srº', bold: false },
+      ...buildNameOnlySegments(formData.recipientRank, formData.recipientName, formData.recipientWarName),
+    ];
+    const nameLineEndY = drawJustifiedParagraph(doc, recipientSegments, leftMargin, startY, 160, 5, 11);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(formData.recipientRole || '', leftMargin, nameLineEndY);
+    doc.text("Assunto: Solicitação de Pagamento de Jornada Op. Extraordinária", leftMargin, nameLineEndY + 10);
+    doc.text("Anexo:", leftMargin, nameLineEndY + 20);
+    doc.text("    Relatório de prevenção", leftMargin, nameLineEndY + 25);
+    doc.text("    Planilha de pagamento", leftMargin, nameLineEndY + 30);
+    doc.text("    Escala de serviço", leftMargin, nameLineEndY + 35);
+    doc.text(`    NS ${formData.memoNs || '_____'} – SEOP/COP`, leftMargin, nameLineEndY + 40);
+    doc.text(`    BG de publicação Nº ${formData.memoBg || '_____'}`, leftMargin, nameLineEndY + 45);
+    doc.text("Senhor Comandante,", leftMargin, nameLineEndY + 65);
     const legalText = MEMO_LEGAL_TEXT
       .replace('{{DATA}}', formData.memoEventDates || '________')
       .replace('{{NS}}', formData.memoNs || '_____')
       .replace('{{BG}}', formData.memoBg || '_____');
     const splitBody = doc.splitTextToSize(legalText, 160);
-    doc.text(splitBody, leftMargin, startY + 80, { align: "justify", maxWidth: 160 });
-    const endOfTextY = startY + 80 + (splitBody.length * 5);
+    doc.text(splitBody, leftMargin, nameLineEndY + 75, { align: "justify", maxWidth: 160 });
+    const endOfTextY = nameLineEndY + 75 + (splitBody.length * 5);
     doc.text("Respeitosamente,", leftMargin, endOfTextY + 15);
     const sigY = endOfTextY + 50;
     
@@ -384,7 +415,7 @@ export const generatePDF = (state: AppState) => {
 
   else if (state.currentDoc === DocumentType.REPORT) {
     const doc = new jsPDF();
-    const headerEndY = addCbmpaHeader(doc, formData.headerUbm);
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm, false, 10, formData.headerCrb);
     const off = headerEndY - 30; // 0 para 1 linha de comando, 5 para 2 linhas (ex: GBS)
     
     const effList = formData.reportEffectiveItems || [];
@@ -690,7 +721,7 @@ export const generatePDF = (state: AppState) => {
 
   else if (state.currentDoc === DocumentType.AUTHORIZATION) {
     const doc = new jsPDF();
-    const headerEndY = addCbmpaHeader(doc, formData.headerUbm, false, 20);
+    const headerEndY = addCbmpaHeader(doc, formData.headerUbm, false, 20, formData.headerCrb);
     const off = headerEndY - 30; // 0 para 1 linha de comando, 5 para 2 linhas (ex: GBS)
 
     doc.setFont("helvetica", "bold");
