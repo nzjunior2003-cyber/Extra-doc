@@ -1946,8 +1946,8 @@ const App: React.FC = () => {
                           </select>
                        </div>
                        <div>
-                          <label className="label">TEXTO DO SERVIÇO (INSERIDO EXATAMENTE COMO DIGITADO)</label>
-                          <input type="text" className="input" placeholder="Ex: montar serviço extraordinário de Reforço da guarda / compor a guarnição de incêndio / atuar como socorrista" value={state.formData.authServiceName} onChange={(e) => handleInputChange('authServiceName', e.target.value)} />
+                          <label className="label">SERVIÇO (APARECE APÓS "PARA MONTAR SERVIÇO DE")</label>
+                          <input type="text" className="input" placeholder="Ex: Comandante de SOS / Reforço da guarda / Guarnição de incêndio" value={state.formData.authServiceName} onChange={(e) => handleInputChange('authServiceName', e.target.value)} />
                        </div>
                        <div>
                           <label className="label">DATA DO SERVIÇO</label>

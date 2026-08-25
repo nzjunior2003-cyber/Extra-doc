@@ -716,9 +716,9 @@ export const generatePDF = (state: AppState) => {
     const serviceText = (formData.authServiceName || '________').trim();
 
     const bodySegments: { text: string, bold: boolean }[] = [
-      { text: `Tem autorização desta seção ${authorizedArticle}`, bold: false },
+      { text: `Tem autorização deste oficial ${authorizedArticle}`, bold: false },
       ...buildMilitarySegments(formData.authAuthorizedRank, formData.authAuthorizedName, formData.authAuthorizedWarName, formData.authAuthorizedMf),
-      { text: `para ${serviceText}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ${substitutedPreposition}`, bold: false },
+      { text: `para montar serviço de ${serviceText}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ${substitutedPreposition}`, bold: false },
       ...buildMilitarySegments(formData.authSubstitutedRank, formData.authSubstitutedName, formData.authSubstitutedWarName, formData.authSubstitutedMf),
       { text: 'sem prejuízo na escala de serviço.', bold: false },
     ];
