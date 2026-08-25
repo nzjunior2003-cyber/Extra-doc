@@ -1956,8 +1956,8 @@ const App: React.FC = () => {
 
                  <div className="bg-blue-50 dark:bg-gray-800/50 rounded-lg p-4 border border-blue-100 dark:border-gray-700">
                     <h3 className="section-title text-cbmpa-800">2. Militar Autorizado</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                       <div className="md:col-span-1 relative">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div className="relative">
                           <label className="label">BUSCAR MILITAR (NOME OU MATRÍCULA)</label>
                           <div className="relative">
                              <input 
@@ -1997,8 +1997,8 @@ const App: React.FC = () => {
 
                  <div className="bg-yellow-50 dark:bg-gray-900/30 rounded-lg p-4 border border-yellow-100 dark:border-gray-700">
                     <h3 className="section-title text-cbmpa-800">3. Militar Substituído</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                       <div className="md:col-span-1 relative">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div className="relative">
                           <label className="label">BUSCAR MILITAR (NOME OU MATRÍCULA)</label>
                           <div className="relative">
                              <input 
