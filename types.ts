@@ -138,12 +138,14 @@ export interface AppState {
     authAuthorizedName: string;
     authAuthorizedWarName: string;
     authAuthorizedMf: string;
+    authAuthorizedGender: 'M' | 'F';
     authServiceName: string;
     authServiceDate: string;
     authSubstitutedRank: string;
     authSubstitutedName: string;
     authSubstitutedWarName: string;
     authSubstitutedMf: string;
+    authSubstitutedGender: 'M' | 'F';
     authSignerName: string;
     authSignerWarName: string;
     authSignerRank: string;

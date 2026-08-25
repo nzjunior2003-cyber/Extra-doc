@@ -711,10 +711,14 @@ export const generatePDF = (state: AppState) => {
     };
     const svcDate = formatFullDate(formData.authServiceDate);
 
+    const authorizedArticle = formData.authAuthorizedGender === 'F' ? 'a' : 'o';
+    const substitutedPreposition = formData.authSubstitutedGender === 'F' ? 'à' : 'ao';
+    const serviceText = (formData.authServiceName || '________').trim();
+
     const bodySegments: { text: string, bold: boolean }[] = [
-      { text: 'Tem autorização desta seção o', bold: false },
+      { text: `Tem autorização desta seção ${authorizedArticle}`, bold: false },
       ...buildMilitarySegments(formData.authAuthorizedRank, formData.authAuthorizedName, formData.authAuthorizedWarName, formData.authAuthorizedMf),
-      { text: `para montar serviço extraordinário de ${formData.authServiceName || '________'}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ao`, bold: false },
+      { text: `para ${serviceText}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ${substitutedPreposition}`, bold: false },
       ...buildMilitarySegments(formData.authSubstitutedRank, formData.authSubstitutedName, formData.authSubstitutedWarName, formData.authSubstitutedMf),
       { text: 'sem prejuízo na escala de serviço.', bold: false },
     ];
