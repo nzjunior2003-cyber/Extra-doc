@@ -9,7 +9,7 @@ const addCbmpaHeader = (doc: any, ubm: string, isLandscape = false): number => {
   const centerX = isLandscape ? 148.5 : 105;
 
   try {
-    doc.addImage(LOGO_CBMPA_BASE64, 'PNG', 10, 8, 34, 17);
+    doc.addImage(LOGO_CBMPA_BASE64, 'PNG', 10, 11.5, 30, 15.1);
   } catch (e) {
     console.error("Erro ao inserir logotipo no cabeçalho:", e);
   }
@@ -103,37 +103,87 @@ const drawSignatureWithBoldHighlight = (doc: any, name: string, warName: string,
   });
 };
 
-// Renderiza um parágrafo com quebra de linha automática, suportando **negrito** inline.
-// Retorna o Y final (logo após a última linha escrita).
-const drawMixedBoldParagraph = (doc: any, text: string, x: number, y: number, maxWidth: number, lineHeight = 5.5, fontSize = 11) => {
-  const rawSegments = text.split(/(\*\*[^*]+\*\*)/g).filter(s => s.length > 0);
+// Renderiza um parágrafo justificado (bordas alinhadas à esquerda e à direita, exceto a última linha),
+// a partir de uma lista de segmentos {text, bold}. Retorna o Y final (logo após a última linha escrita).
+const drawJustifiedParagraph = (doc: any, segments: { text: string, bold: boolean }[], x: number, y: number, maxWidth: number, lineHeight = 5.5, fontSize = 11) => {
+  doc.setFontSize(fontSize);
+
+  // Explode os segmentos em palavras individuais, preservando o negrito de cada uma
   const words: { text: string, bold: boolean }[] = [];
-  rawSegments.forEach(seg => {
-    const isBold = seg.startsWith('**') && seg.endsWith('**');
-    const clean = isBold ? seg.slice(2, -2) : seg;
-    clean.split(' ').forEach(w => {
-      if (w.length > 0) words.push({ text: w, bold: isBold });
+  segments.forEach(seg => {
+    seg.text.split(' ').forEach(w => {
+      if (w.length > 0) words.push({ text: w, bold: seg.bold });
     });
   });
 
-  let cursorX = x;
-  let cursorY = y;
-  doc.setFontSize(fontSize);
   doc.setFont("helvetica", "normal");
   const spaceWidth = doc.getTextWidth(' ');
+
+  // 1ª passada: distribui as palavras em linhas respeitando maxWidth
+  const lines: { text: string, bold: boolean }[][] = [];
+  let currentLine: { text: string, bold: boolean }[] = [];
+  let currentWidth = 0;
 
   words.forEach(word => {
     doc.setFont("helvetica", word.bold ? "bold" : "normal");
     const wWidth = doc.getTextWidth(word.text);
-    if (cursorX + wWidth > x + maxWidth) {
-      cursorX = x;
-      cursorY += lineHeight;
+    const projectedWidth = currentLine.length === 0 ? wWidth : currentWidth + spaceWidth + wWidth;
+    if (projectedWidth > maxWidth && currentLine.length > 0) {
+      lines.push(currentLine);
+      currentLine = [word];
+      currentWidth = wWidth;
+    } else {
+      currentLine.push(word);
+      currentWidth = projectedWidth;
     }
-    doc.text(word.text, cursorX, cursorY);
-    cursorX += wWidth + spaceWidth;
+  });
+  if (currentLine.length > 0) lines.push(currentLine);
+
+  // 2ª passada: desenha cada linha, justificando (exceto a última)
+  let cursorY = y;
+  lines.forEach((line, lineIdx) => {
+    const isLastLine = lineIdx === lines.length - 1;
+
+    let totalWordsWidth = 0;
+    line.forEach(w => {
+      doc.setFont("helvetica", w.bold ? "bold" : "normal");
+      totalWordsWidth += doc.getTextWidth(w.text);
+    });
+
+    const gap = (!isLastLine && line.length > 1)
+      ? (maxWidth - totalWordsWidth) / (line.length - 1)
+      : spaceWidth;
+
+    let cursorX = x;
+    line.forEach(w => {
+      doc.setFont("helvetica", w.bold ? "bold" : "normal");
+      doc.text(w.text, cursorX, cursorY);
+      cursorX += doc.getTextWidth(w.text) + gap;
+    });
+
+    cursorY += lineHeight;
   });
 
-  return cursorY + lineHeight;
+  return cursorY;
+};
+
+// Monta os segmentos de texto (com negrito) para o posto, nome (com nome de guerra em negrito) e MF de um militar
+const buildMilitarySegments = (rank: string, fullName: string, warName: string, mf: string): { text: string, bold: boolean }[] => {
+  const segs: { text: string, bold: boolean }[] = [];
+  if (rank) segs.push({ text: rank.toUpperCase(), bold: true });
+
+  const warTokens = (warName || '').trim().toUpperCase().replace(/\./g, '').split(/\s+/).filter(Boolean);
+  const nameWords = (fullName || '').trim().toUpperCase().split(/\s+/).filter(Boolean);
+  nameWords.forEach((word, idx) => {
+    const clean = word.replace(/[,.]/g, '');
+    const isBold = warTokens.length > 0 && warTokens.includes(clean);
+    const suffix = idx === nameWords.length - 1 ? ',' : '';
+    segs.push({ text: word + suffix, bold: isBold });
+  });
+
+  segs.push({ text: 'MF:', bold: true });
+  segs.push({ text: `${mf || '________'},`, bold: true });
+  return segs;
 };
 
 export const generatePDF = (state: AppState) => {
@@ -661,9 +711,15 @@ export const generatePDF = (state: AppState) => {
     };
     const svcDate = formatFullDate(formData.authServiceDate);
 
-    const bodyText = `Tem autorização desta seção o **${formData.authAuthorizedRank} ${formData.authAuthorizedName}**, **MF:** ${formData.authAuthorizedMf}, para montar serviço extraordinário de ${formData.authServiceName || '________'}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ao **${formData.authSubstitutedRank} ${formData.authSubstitutedName}**, **MF:** ${formData.authSubstitutedMf}, sem prejuízo na escala de serviço.`;
+    const bodySegments: { text: string, bold: boolean }[] = [
+      { text: 'Tem autorização desta seção o', bold: false },
+      ...buildMilitarySegments(formData.authAuthorizedRank, formData.authAuthorizedName, formData.authAuthorizedWarName, formData.authAuthorizedMf),
+      { text: `para montar serviço extraordinário de ${formData.authServiceName || '________'}, no dia ${svcDate.day} de ${svcDate.month} de ${svcDate.year} ( ${svcDate.weekday} ), em substituição ao`, bold: false },
+      ...buildMilitarySegments(formData.authSubstitutedRank, formData.authSubstitutedName, formData.authSubstitutedWarName, formData.authSubstitutedMf),
+      { text: 'sem prejuízo na escala de serviço.', bold: false },
+    ];
 
-    const bodyEndY = drawMixedBoldParagraph(doc, bodyText, 20, 65 + off, 170, 5.5, 11);
+    const bodyEndY = drawJustifiedParagraph(doc, bodySegments, 20, 65 + off, 170, 5.5, 11);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);

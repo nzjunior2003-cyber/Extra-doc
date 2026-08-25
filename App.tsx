@@ -74,11 +74,13 @@ const DEFAULT_FORM_DATA = {
 
   authAuthorizedRank: RANKS[0],
   authAuthorizedName: '',
+  authAuthorizedWarName: '',
   authAuthorizedMf: '',
   authServiceName: '',
   authServiceDate: new Date().toISOString().split('T')[0],
   authSubstitutedRank: RANKS[0],
   authSubstitutedName: '',
+  authSubstitutedWarName: '',
   authSubstitutedMf: '',
   authSignerName: '',
   authSignerWarName: '',
@@ -1954,7 +1956,7 @@ const App: React.FC = () => {
 
                  <div className="bg-blue-50 dark:bg-gray-800/50 rounded-lg p-4 border border-blue-100 dark:border-gray-700">
                     <h3 className="section-title text-cbmpa-800">2. Militar Autorizado</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                        <div className="md:col-span-1 relative">
                           <label className="label">BUSCAR MILITAR (NOME OU MATRÍCULA)</label>
                           <div className="relative">
@@ -1979,10 +1981,12 @@ const App: React.FC = () => {
                           )}
                        </div>
                        <div>
-                          <label className="label">POSTO/GRADUAÇÃO</label>
-                          <select className="input" value={state.formData.authAuthorizedRank} onChange={(e) => handleInputChange('authAuthorizedRank', e.target.value)}>
-                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
-                          </select>
+                          <label className="label">NOME DE GUERRA</label>
+                          <input type="text" className="input" placeholder="Ex: SILVA" value={state.formData.authAuthorizedWarName} onChange={(e) => handleInputChange('authAuthorizedWarName', e.target.value)} />
+                       </div>
+                       <div>
+                          <label className="label">POSTO/GRADUAÇÃO (AUTOMÁTICO)</label>
+                          <input type="text" className="input bg-gray-100 dark:bg-gray-900 cursor-not-allowed" value={state.formData.authAuthorizedRank} disabled readOnly />
                        </div>
                        <div>
                           <label className="label">MF (MATRÍCULA)</label>
@@ -1993,7 +1997,7 @@ const App: React.FC = () => {
 
                  <div className="bg-yellow-50 dark:bg-gray-900/30 rounded-lg p-4 border border-yellow-100 dark:border-gray-700">
                     <h3 className="section-title text-cbmpa-800">3. Militar Substituído</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                        <div className="md:col-span-1 relative">
                           <label className="label">BUSCAR MILITAR (NOME OU MATRÍCULA)</label>
                           <div className="relative">
@@ -2018,10 +2022,12 @@ const App: React.FC = () => {
                           )}
                        </div>
                        <div>
-                          <label className="label">POSTO/GRADUAÇÃO</label>
-                          <select className="input" value={state.formData.authSubstitutedRank} onChange={(e) => handleInputChange('authSubstitutedRank', e.target.value)}>
-                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
-                          </select>
+                          <label className="label">NOME DE GUERRA</label>
+                          <input type="text" className="input" placeholder="Ex: SILVA" value={state.formData.authSubstitutedWarName} onChange={(e) => handleInputChange('authSubstitutedWarName', e.target.value)} />
+                       </div>
+                       <div>
+                          <label className="label">POSTO/GRADUAÇÃO (AUTOMÁTICO)</label>
+                          <input type="text" className="input bg-gray-100 dark:bg-gray-900 cursor-not-allowed" value={state.formData.authSubstitutedRank} disabled readOnly />
                        </div>
                        <div>
                           <label className="label">MF (MATRÍCULA)</label>

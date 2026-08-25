@@ -136,11 +136,13 @@ export interface AppState {
     // Authorization Specific
     authAuthorizedRank: string;
     authAuthorizedName: string;
+    authAuthorizedWarName: string;
     authAuthorizedMf: string;
     authServiceName: string;
     authServiceDate: string;
     authSubstitutedRank: string;
     authSubstitutedName: string;
+    authSubstitutedWarName: string;
     authSubstitutedMf: string;
     authSignerName: string;
     authSignerWarName: string;
