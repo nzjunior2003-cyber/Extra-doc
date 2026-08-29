@@ -3,11 +3,11 @@ import {
   Flame, Sun, Moon, FileText, DollarSign, ClipboardList, 
   Share2, Upload, Wifi, WifiOff, Database, CheckCircle2,
   User, Search, Plus, X, Star, Trash2, Check, Download,
-  GripVertical, Camera, Eraser, ShieldCheck
+  GripVertical, Camera, Eraser, ShieldCheck, Loader2
 } from 'lucide-react';
 import { AppState, DocumentType, Soldier, CostSheetItem, ReportEffectiveItem, ReportServiceItem } from './types';
 import { RANKS, UBMS, UNIT_VALUE_DEFAULT, EXTERNAL_DB_URL, REPORT_LOGISTICS_ITEMS, REPORT_VEHICLE_ITEMS, OCCURRENCE_CODES } from './constants';
-import { refineText } from './services/geminiService';
+import { refineText, extractScheduleFromImage } from './services/geminiService';
 import { generatePDF } from './utils/pdfGenerator';
 import { RAW_SOLDIER_CSV } from './data/initialSoldiers';
 
@@ -99,6 +99,7 @@ const DEFAULT_FORM_DATA = {
 const App: React.FC = () => {
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scheduleFileInputRef = useRef<HTMLInputElement>(null);
 
   const [state, setState] = useState<AppState>({
     currentDoc: DocumentType.MEMO,
@@ -108,6 +109,7 @@ const App: React.FC = () => {
   });
 
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isScheduleImporting, setIsScheduleImporting] = useState(false);
   const [dbStatus, setDbStatus] = useState("Conectando...");
   const [isOnline, setIsOnline] = useState(true);
 
@@ -872,6 +874,76 @@ const App: React.FC = () => {
     setNewEffItem({ soldier: null, status: 'P', ubm: UBMS[0], serviceType: 'PREVENCAO' });
   };
 
+  const findBestSoldierMatch = (nome: string): Soldier | null => {
+    const target = nome.trim().toUpperCase();
+    if (!target) return null;
+    const exact = state.personnelDb.find(s => s.nome.trim().toUpperCase() === target);
+    if (exact) return exact;
+    const partial = state.personnelDb.find(s => {
+      const n = s.nome.trim().toUpperCase();
+      return n.includes(target) || target.includes(n);
+    });
+    return partial || null;
+  };
+
+  const handleScheduleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setIsScheduleImporting(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const commaIdx = result.indexOf(',');
+          resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result);
+        };
+        reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
+        reader.readAsDataURL(file);
+      });
+
+      const extracted = await extractScheduleFromImage(base64, file.type || 'image/jpeg');
+
+      const newItems: ReportEffectiveItem[] = extracted.militares.map((m, idx) => {
+        const match = findBestSoldierMatch(m.nome);
+        return {
+          id: `${Date.now()}-${idx}`,
+          soldierName: match ? match.nome : m.nome.toUpperCase(),
+          soldierRank: match?.posto || '',
+          soldierUbm: match?.ubm || UBMS[0],
+          soldierMf: match?.matricula || '',
+          status: m.situacao as any,
+          serviceType: 'PREVENCAO' as any,
+          isCommander: false
+        };
+      });
+
+      setState(prev => {
+        const fd = { ...prev.formData };
+        if (extracted.eventName) fd.eventName = extracted.eventName;
+        if (extracted.eventDate && /^\d{4}-\d{2}-\d{2}$/.test(extracted.eventDate)) fd.eventDate = extracted.eventDate;
+        if (extracted.eventDayOfWeek) fd.eventDayOfWeek = extracted.eventDayOfWeek;
+        if (extracted.eventLocal) fd.eventLocal = extracted.eventLocal;
+        if (extracted.eventStartTime) fd.eventStartTime = extracted.eventStartTime;
+        if (extracted.eventEndTime) fd.eventEndTime = extracted.eventEndTime;
+        fd.reportEffectiveItems = [...(prev.formData.reportEffectiveItems || []), ...newItems];
+        return { ...prev, formData: fd };
+      });
+
+      const unmatchedCount = newItems.filter(i => !i.soldierMf).length;
+      if (unmatchedCount > 0) {
+        alert(`Escala importada: ${newItems.length} militar(es) inserido(s). ${unmatchedCount} não foram encontrados na planilha e precisam ter posto/matrícula preenchidos manualmente.`);
+      }
+    } catch (err) {
+      console.error('Erro ao importar escala:', err);
+      alert('Não foi possível importar a escala. Verifique a imagem/PDF e tente novamente.');
+    } finally {
+      setIsScheduleImporting(false);
+    }
+  };
+
   const removeEffectiveItem = (id: string) => {
     setState(prev => ({
       ...prev,
@@ -1513,7 +1585,27 @@ const App: React.FC = () => {
                  
                  {/* 1. HEADER */}
                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <h3 className="section-title text-cbmpa-800">1. Dados Iniciais (Sincronizado com Planilha)</h3>
+                    <div className="flex items-center justify-between mb-4">
+                       <h3 className="section-title text-cbmpa-800 mb-0">1. Dados Iniciais (Sincronizado com Planilha)</h3>
+                       <div>
+                          <button
+                            type="button"
+                            onClick={() => scheduleFileInputRef.current?.click()}
+                            disabled={isScheduleImporting}
+                            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white px-4 py-2 rounded font-bold flex items-center gap-2 text-xs uppercase"
+                          >
+                             {isScheduleImporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                             {isScheduleImporting ? 'Analisando escala...' : 'Importar Escala (Foto/PDF)'}
+                          </button>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            ref={scheduleFileInputRef}
+                            className="hidden"
+                            onChange={handleScheduleFileSelected}
+                          />
+                       </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <div>
                           <label className="label">UNIDADE (CABEÇALHO DO DOCUMENTO)</label>
