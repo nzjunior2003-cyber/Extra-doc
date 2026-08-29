@@ -24,7 +24,7 @@ export const refineText = async (
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       contents: prompt,
     });
 
@@ -82,7 +82,7 @@ export const extractScheduleFromImage = async (
   const ai = getClient();
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.5-flash',
     contents: [
       {
         role: 'user',
