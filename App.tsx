@@ -879,6 +879,16 @@ const App: React.FC = () => {
     }));
   };
 
+  const updateEffectiveItemStatus = (id: string, status: string) => {
+    setState(prev => ({
+      ...prev,
+      formData: {
+        ...prev.formData,
+        reportEffectiveItems: prev.formData.reportEffectiveItems.map(i => i.id === id ? { ...i, status: status as any } : i)
+      }
+    }));
+  };
+
   const addServiceItem = () => {
     if (!newSvcItem.name) return;
     const newItem: ReportServiceItem = {
@@ -1611,7 +1621,7 @@ const App: React.FC = () => {
                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="section-title text-cbmpa-800">2. Alterações no Efetivo</h3>
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded items-end">
-                       <div className="md:col-span-4 relative">
+                       <div className="md:col-span-6 relative">
                           <label className="label">BUSCAR MILITAR</label>
                           <input type="text" className="input" placeholder="Nome/Matrícula..." value={effSearchTerm} onChange={handleEffSearchChange} />
                           {showEffSuggestions && (
@@ -1620,7 +1630,7 @@ const App: React.FC = () => {
                             </ul>
                           )}
                        </div>
-                       <div className="md:col-span-2">
+                       <div className="md:col-span-3">
                           <label className="label">UBM</label>
                           <select className="input" value={newEffItem.ubm} onChange={(e) => setNewEffItem({...newEffItem, ubm: e.target.value})}>
                              {UBMS.map(u => <option key={u} value={u}>{u}</option>)}
@@ -1635,17 +1645,7 @@ const App: React.FC = () => {
                              <option value="CORTE_VEGETAL">CORTE</option>
                           </select>
                        </div>
-                       <div className="md:col-span-2">
-                          <label className="label">SITUAÇÃO</label>
-                          <select className="input" value={newEffItem.status} onChange={(e) => setNewEffItem({...newEffItem, status: e.target.value})}>
-                             <option value="P">PRESENTE</option>
-                             <option value="F">FALTA</option>
-                             <option value="D">DISPENSA</option>
-                             <option value="P/A">PERMUTA</option>
-                             <option value="A">ATRASO</option>
-                          </select>
-                       </div>
-                       <div className="md:col-span-2">
+                       <div className="md:col-span-1">
                           <button onClick={addEffectiveItem} disabled={!newEffItem.soldier} className="bg-cbmpa-600 text-white w-full h-[42px] rounded font-bold disabled:opacity-50 text-xs uppercase flex items-center justify-center gap-1">
                              <Plus size={14} /> Inserir
                           </button>
@@ -1689,12 +1689,20 @@ const App: React.FC = () => {
                                         {item.serviceType === 'GUARDA_VIDAS' && 'GV'}
                                         {item.serviceType === 'CORTE_VEGETAL' && 'CORTE'}
                                      </td>
-                                     <td className="p-2 text-center font-bold">
-                                        {item.status === 'P' && 'PRESENTE'}
-                                        {item.status === 'F' && 'FALTA'}
-                                        {item.status === 'D' && 'DISPENSA'}
-                                        {item.status === 'P/A' && 'PERMUTA'}
-                                        {item.status === 'A' && 'ATRASO'}
+                                     <td className="p-2 text-center">
+                                        <select
+                                          value={item.status}
+                                          onChange={(e) => updateEffectiveItemStatus(item.id, e.target.value)}
+                                          onClick={(e) => e.stopPropagation()}
+                                          draggable={false}
+                                          className="input text-xs font-bold py-1"
+                                        >
+                                           <option value="P">PRESENTE</option>
+                                           <option value="F">FALTA</option>
+                                           <option value="D">DISPENSA</option>
+                                           <option value="P/A">PERMUTA</option>
+                                           <option value="A">ATRASO</option>
+                                        </select>
                                      </td>
                                      <td className="p-2 flex justify-center items-center gap-2">
                                         <div title="Segure para arrastar" className="text-gray-400 hover:text-gray-600 active:text-blue-600 flex items-center justify-center">
